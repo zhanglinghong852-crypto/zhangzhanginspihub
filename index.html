@@ -599,6 +599,63 @@
 
   .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
+  /* ── TAG DROPDOWN ── */
+  .tag-dropdown-wrap { position: relative; }
+  .tag-dropdown-trigger {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px; border-radius: 12px;
+    border: 1.5px solid rgba(0,0,0,0.1); background: var(--bg);
+    cursor: pointer; font-size: 14px; color: var(--ink);
+    transition: border-color 0.15s;
+  }
+  .tag-dropdown-trigger:hover { border-color: var(--ink); }
+  .tag-dropdown-trigger.open { border-color: var(--ink); background: white; }
+  .tag-dropdown-trigger span { color: var(--muted); }
+  .tag-dropdown-trigger span.has-tags { color: var(--ink); font-weight: 500; }
+  .tag-dropdown-menu {
+    position: absolute; top: 100%; left: 0; right: 0; margin-top: 6px;
+    background: white; border-radius: 12px; border: 1.5px solid rgba(0,0,0,0.1);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.12); z-index: 100;
+    opacity: 0; pointer-events: none; transform: translateY(-4px);
+    transition: opacity 0.15s, transform 0.15s;
+    max-height: 280px; display: flex; flex-direction: column;
+  }
+  .tag-dropdown-wrap.open .tag-dropdown-menu { opacity: 1; pointer-events: all; transform: translateY(0); }
+  .tag-dropdown-search { padding: 10px 12px; border-bottom: 1px solid rgba(0,0,0,0.06); }
+  .tag-dropdown-search input {
+    width: 100%; padding: 8px 12px; border-radius: 8px;
+    border: 1.5px solid rgba(0,0,0,0.1); font-size: 13px; outline: none;
+  }
+  .tag-dropdown-search input:focus { border-color: var(--ink); }
+  .tag-dropdown-list { overflow-y: auto; padding: 6px; flex: 1; }
+  .tag-dropdown-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 10px; border-radius: 8px; cursor: pointer; font-size: 13px;
+    transition: background 0.1s;
+  }
+  .tag-dropdown-item:hover { background: var(--bg); }
+  .tag-dropdown-item.selected { background: var(--ink); color: white; }
+  .tag-dropdown-item .check { opacity: 0; font-size: 12px; }
+  .tag-dropdown-item.selected .check { opacity: 1; }
+  .tag-dropdown-empty { padding: 20px; text-align: center; font-size: 13px; color: var(--muted); }
+  .tag-dropdown-create {
+    display: flex; align-items: center; gap: 6px; padding: 8px 10px;
+    border-radius: 8px; cursor: pointer; font-size: 13px; color: var(--accent); font-weight: 500;
+  }
+  .tag-dropdown-create:hover { background: #fff0ec; }
+  .tag-selected-list {
+    display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px;
+  }
+  .tag-selected-pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 10px; border-radius: 100px; font-size: 12px; font-weight: 500;
+    background: var(--ink); color: white;
+  }
+  .tag-selected-pill .remove {
+    cursor: pointer; opacity: 0.7; font-size: 14px; line-height: 1;
+  }
+  .tag-selected-pill .remove:hover { opacity: 1; }
+
   .modal-footer { margin-top: 16px; display: flex; gap: 10px; justify-content: flex-end; }
   .modal-footer .btn { padding: 12px 28px; font-size: 15px; font-weight: 600; border-radius: 100px; }
   .modal-footer .btn-outline { border: 2px solid rgba(0,0,0,0.15); }
@@ -897,8 +954,19 @@
 
     <div class="form-group">
       <label class="form-label">标签 *</label>
-      <div id="tagPicker" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px"></div>
-      <input type="text" id="inputTags" class="form-input" placeholder="输入新标签后按回车，数字键快速选中">
+      <div class="tag-dropdown-wrap" id="tagDropdownWrap">
+        <div class="tag-dropdown-trigger" id="tagDropdownTrigger" onclick="toggleTagDropdown()">
+          <span id="tagDropdownPlaceholder">选择标签（可多选）或输入新标签</span>
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="tag-dropdown-menu" id="tagDropdownMenu">
+          <div class="tag-dropdown-search">
+            <input type="text" id="tagDropdownInput" placeholder="搜索或输入新标签..." oninput="onTagDropdownInput(this.value)" onkeydown="onTagDropdownKeydown(event)">
+          </div>
+          <div class="tag-dropdown-list" id="tagDropdownList"></div>
+        </div>
+      </div>
+      <div class="tag-selected-list" id="tagSelectedList"></div>
     </div>
 
     <div class="modal-footer">
@@ -1050,66 +1118,154 @@
       initial: initial
     });
   }
-  // ── Tag picker in upload modal ──
+  // ── Tag dropdown in upload modal ──
   let tagPickerSelected = [];
+  let tagDropdownOpen = false;
 
-  function refreshTagPicker() {
-    const picker = document.getElementById('tagPicker');
-    if (!picker) return;
-    const allTags = getMergedHomeTags();
-    picker.innerHTML = allTags.map(tag => {
-      const sel = tagPickerSelected.includes(tag);
-      return `<button type="button" onclick="toggleTagPicker('${tag.replace(/'/g, "\\'")}')" style="
-        padding:5px 11px;border-radius:100px;font-size:12px;font-weight:500;cursor:pointer;
-        border:1.5px solid ${sel ? 'var(--ink)' : 'rgba(0,0,0,0.12)'};
-        background:${sel ? 'var(--ink)' : 'white'};color:${sel ? 'white' : '#555'};
-        transition:all 0.15s">${tag}</button>`;
-    }).join('');
+  function toggleTagDropdown() {
+    tagDropdownOpen = !tagDropdownOpen;
+    const wrap = document.getElementById('tagDropdownWrap');
+    const trigger = document.getElementById('tagDropdownTrigger');
+    if (tagDropdownOpen) {
+      wrap.classList.add('open');
+      trigger.classList.add('open');
+      document.getElementById('tagDropdownInput').focus();
+      renderTagDropdownList();
+    } else {
+      wrap.classList.remove('open');
+      trigger.classList.remove('open');
+    }
   }
 
-  function toggleTagPicker(tag) {
+  function closeTagDropdown() {
+    tagDropdownOpen = false;
+    document.getElementById('tagDropdownWrap')?.classList.remove('open');
+    document.getElementById('tagDropdownTrigger')?.classList.remove('open');
+  }
+
+  function renderTagDropdownList(filter = '') {
+    const list = document.getElementById('tagDropdownList');
+    const allTags = getMergedHomeTags();
+    const filtered = filter
+      ? allTags.filter(t => t.toLowerCase().includes(filter.toLowerCase()))
+      : allTags;
+
+    let html = '';
+    if (filter && !allTags.map(t => t.toLowerCase()).includes(filter.toLowerCase())) {
+      html += `<div class="tag-dropdown-create" onclick="addNewTag('${filter.replace(/'/g, "\\'")}')">
+        <svg width="14" height="14" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        创建标签 "${filter}"
+      </div>`;
+    }
+    if (filtered.length === 0 && !filter) {
+      html += `<div class="tag-dropdown-empty">暂无标签，输入创建新标签</div>`;
+    } else {
+      html += filtered.map(tag => {
+        const sel = tagPickerSelected.includes(tag);
+        return `<div class="tag-dropdown-item ${sel ? 'selected' : ''}" onclick="toggleTagInDropdown('${tag.replace(/'/g, "\\'")}')">
+          <span>${tag}</span>
+          <span class="check">✓</span>
+        </div>`;
+      }).join('');
+    }
+    list.innerHTML = html;
+  }
+
+  function onTagDropdownInput(val) {
+    renderTagDropdownList(val.trim());
+  }
+
+  function onTagDropdownKeydown(e) {
+    if (e.key === 'Enter') {
+      const val = e.target.value.trim();
+      if (val) addNewTag(val);
+    }
+    if (e.key === 'Escape') closeTagDropdown();
+  }
+
+  function toggleTagInDropdown(tag) {
     const idx = tagPickerSelected.indexOf(tag);
     if (idx >= 0) {
       tagPickerSelected.splice(idx, 1);
     } else {
       tagPickerSelected.push(tag);
+      // 同步到首页标签（如果是新标签）
+      syncNewTagToHome(tag);
     }
-    refreshTagPicker();
-    // Also update the text input to show selected tags
-    document.getElementById('inputTags').value = tagPickerSelected.join('、');
+    renderTagDropdownList(document.getElementById('tagDropdownInput')?.value?.trim() || '');
+    renderTagSelectedList();
+    updateTagDropdownTrigger();
+  }
+
+  function addNewTag(tag) {
+    if (!tagPickerSelected.includes(tag)) {
+      tagPickerSelected.push(tag);
+      // 同步到首页标签
+      syncNewTagToHome(tag);
+    }
+    document.getElementById('tagDropdownInput').value = '';
+    renderTagDropdownList();
+    renderTagSelectedList();
+    updateTagDropdownTrigger();
+  }
+
+  function removeTagFromSelected(tag) {
+    const idx = tagPickerSelected.indexOf(tag);
+    if (idx >= 0) tagPickerSelected.splice(idx, 1);
+    renderTagSelectedList();
+    updateTagDropdownTrigger();
+    if (tagDropdownOpen) renderTagDropdownList(document.getElementById('tagDropdownInput')?.value?.trim() || '');
+  }
+
+  function renderTagSelectedList() {
+    const container = document.getElementById('tagSelectedList');
+    container.innerHTML = tagPickerSelected.map(tag =>
+      `<span class="tag-selected-pill">${tag}<span class="remove" onclick="removeTagFromSelected('${tag.replace(/'/g, "\\'")}')">×</span></span>`
+    ).join('');
+  }
+
+  function updateTagDropdownTrigger() {
+    const trigger = document.getElementById('tagDropdownTrigger');
+    const placeholder = document.getElementById('tagDropdownPlaceholder');
+    if (tagPickerSelected.length > 0) {
+      placeholder.textContent = `已选 ${tagPickerSelected.length} 个标签`;
+      placeholder.classList.add('has-tags');
+    } else {
+      placeholder.textContent = '选择标签（可多选）或输入新标签';
+      placeholder.classList.remove('has-tags');
+    }
+  }
+
+  // 同步新标签到首页筛选栏
+  function syncNewTagToHome(tag) {
+    const allTags = getMergedHomeTags();
+    if (!allTags.map(t => t.toLowerCase()).includes(tag.toLowerCase())) {
+      const customTabs = getCustomTabs();
+      if (!customTabs.includes(tag)) {
+        customTabs.push(tag);
+        saveCustomTabs(customTabs);
+      }
+      syncHomeFilterTags();
+    }
   }
 
   // ── Upload modal open/close ──
   function openModal() {
     tagPickerSelected = [];
-    refreshTagPicker();
+    tagDropdownOpen = false;
+    closeTagDropdown();
+    renderTagSelectedList();
+    updateTagDropdownTrigger();
     document.getElementById('modalOverlay').classList.add('open');
   }
 
-  // Wire up inputTags to support both typing and tag-picker sync
-  (function() {
-    const input = document.getElementById('inputTags');
-    if (input) {
-      input.addEventListener('input', function() {
-        // Sync tagPickerSelected from text input (for quick comma/enter usage)
-        const vals = this.value.split(/[,，、]+/).map(t => t.trim()).filter(Boolean);
-        tagPickerSelected = vals;
-        refreshTagPicker();
-      });
-      input.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter' && this.value.trim()) {
-          e.preventDefault();
-          const vals = this.value.split(/[,，、]+/).map(t => t.trim()).filter(Boolean);
-          vals.forEach(v => {
-            if (!tagPickerSelected.includes(v)) tagPickerSelected.push(v);
-          });
-          this.value = tagPickerSelected.join('、');
-          tagPickerSelected = []; // reset so they show as selected pills
-          refreshTagPicker();
-        }
-      });
+  // Click outside to close dropdown
+  document.addEventListener('click', e => {
+    const wrap = document.getElementById('tagDropdownWrap');
+    if (wrap && !wrap.contains(e.target) && tagDropdownOpen) {
+      closeTagDropdown();
     }
-  })();
+  });
 
   // Allow Enter key in demo input
   document.addEventListener('DOMContentLoaded', () => {
@@ -1414,7 +1570,8 @@
 
       // Sync tag picker to this item's existing tags
       tagPickerSelected = item.tags ? [...item.tags] : [];
-      refreshTagPicker();
+      renderTagSelectedList();
+      updateTagDropdownTrigger();
 
       // Fill the modal form with existing data
       document.getElementById('inputTitle').value = item.title || '';
@@ -1444,7 +1601,6 @@
 
     const title = document.getElementById('inputTitle').value.trim();
     const highlight = document.getElementById('inputHighlight').value.trim();
-    const tagsRaw = document.getElementById('inputTags').value.trim();
 
     if (!title) {
       document.getElementById('inputTitle').style.borderColor = 'var(--accent)';
@@ -1452,8 +1608,8 @@
       return;
     }
 
-    const typedTags = tagsRaw ? tagsRaw.split(/[,，、]+/).map(t => t.trim()).filter(Boolean) : [];
-    const mergedTags = [...new Set([...tagPickerSelected, ...typedTags])];
+    // Use tagPickerSelected from dropdown
+    const mergedTags = [...tagPickerSelected];
 
     try {
       const raw = localStorage.getItem('inspihub_inspirations');
@@ -1487,7 +1643,8 @@
     document.getElementById('inputUrl').value = '';
     document.getElementById('inputTitle').style.borderColor = '';
     tagPickerSelected = [];
-    refreshTagPicker();
+    renderTagSelectedList();
+    updateTagDropdownTrigger();
     uploadedImageData = null;
     const dropZone = document.getElementById('dropZone');
     dropZone.innerHTML = `<div class="drop-icon"><svg width="28" height="28" viewBox="0 0 20 20" fill="none"><rect x="2.5" y="3.5" width="15" height="13" rx="2" stroke="currentColor" stroke-width="1.5"/><circle cx="7" cy="8" r="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M2.5 13.5l4-3.5 3 2.5 3-4 5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="drop-text"><strong>拖拽图片 / 截图</strong> 到这里 · 点击选择文件 · Ctrl+V 粘贴</div>`;
@@ -1862,7 +2019,6 @@
   function submitUpload() {
     const title = document.getElementById('inputTitle').value.trim();
     const highlight = document.getElementById('inputHighlight').value.trim();
-    const tagsRaw = document.getElementById('inputTags').value.trim();
 
     if (!title) {
       document.getElementById('inputTitle').style.borderColor = 'var(--accent)';
@@ -1870,14 +2026,12 @@
       return;
     }
 
-    // Merge typed tags + tag picker selected tags (deduplicated)
-    const typedTags = tagsRaw ? tagsRaw.split(/[,，、]+/).map(t => t.trim()).filter(Boolean) : [];
-    const allTyped = [...new Set([...tagPickerSelected, ...typedTags])];
+    // Use tagPickerSelected from dropdown
     const newItem = {
       id: Date.now(),
       title,
       highlight,
-      tags: allTyped,
+      tags: [...tagPickerSelected],
       image: uploadedImageData || null,
       url: document.getElementById('inputUrl').value.trim(),
       author: currentUser ? (currentUser.name || currentUser.email) : 'unknown',
