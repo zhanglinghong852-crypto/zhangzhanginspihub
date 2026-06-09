@@ -2000,7 +2000,7 @@
     renderGoogleBtn();
   })();
 
-  // ── 新增：从 data.json 加载初始数据 ──
+  // ── 从 data.json 加载初始数据 ──
   async function loadInitialData() {
     const raw = localStorage.getItem('inspihub_inspirations');
     if (raw) return; // 已有数据，跳过
@@ -2014,7 +2014,52 @@
     }
   }
 
-  loadInitialData();
+  // ── Init: 先加载数据，再恢复登录状态 ──
+  (async function init() {
+    document.getElementById('uploadTrigger').style.display = 'none';
+
+    // 1. 先把 data.json 的初始数据同步到 localStorage
+    await loadInitialData();
+
+    // 2. 再恢复登录状态
+    const savedUser = localStorage.getItem('inspihub_user');
+    if (savedUser) {
+      try {
+        loginWithUser(JSON.parse(savedUser));
+        return;
+      } catch(e) {}
+    }
+
+    // 3. 未登录状态
+    document.getElementById('loginPage').classList.remove('hidden');
+    // 已登录用户打开页面时也同步一次首页标签
+    syncHomeFilterTags();
+
+    // 4. 尝试渲染 Google 登录按钮
+    let googleAttempts = 0;
+    const maxAttempts = 10;
+    function renderGoogleBtn() {
+      googleAttempts++;
+      if (typeof google !== 'undefined' && google.accounts) {
+        googleSDKReady = true;
+        google.accounts.id.initialize({
+          client_id: '1042556696855-g3kj8dj9fah41sanbkag73ev0ejfn36r.apps.googleusercontent.com',
+          callback: handleGoogleCredential,
+          cancel_on_tap_outside: false
+        });
+        google.accounts.id.renderButton(
+          document.getElementById('googleBtnContainer'),
+          { type: 'standard', shape: 'pill', theme: 'outline', text: 'signin_with', size: 'large', locale: 'zh_CN', width: 280 }
+        );
+        google.accounts.id.prompt();
+      } else if (googleAttempts < maxAttempts) {
+        setTimeout(renderGoogleBtn, 300);
+      } else {
+        document.getElementById('googleErrorHint').style.display = 'block';
+      }
+    }
+    renderGoogleBtn();
+  })();
 </script>
 </body>
 </html>
