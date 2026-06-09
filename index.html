@@ -1,0 +1,1838 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InspiHub — 设计灵感共享平台</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f3ef;
+    --white: #ffffff;
+    --ink: #1a1a1a;
+    --muted: #8a8a8a;
+    --accent: #ff5c3a;
+    --accent2: #7c5cfc;
+    --accent3: #26c599;
+    --yellow: #ffd166;
+    --pink: #ff85a1;
+    --card-radius: 18px;
+    --pill-radius: 100px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    overflow-y: auto;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 28px;
+    background: rgba(245,243,239,0.85);
+    backdrop-filter: blur(16px);
+    border-bottom: 1.5px solid rgba(0,0,0,0.06);
+  }
+
+  .nav-logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 20px;
+    letter-spacing: -0.5px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .nav-logo span { color: var(--accent); }
+  .logo-dot {
+    width: 8px; height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    display: inline-block;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%,100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.4); opacity: 0.7; }
+  }
+
+  .nav-center {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--white);
+    border-radius: var(--pill-radius);
+    padding: 7px 16px;
+    border: 1.5px solid rgba(0,0,0,0.08);
+    width: 320px;
+  }
+  .nav-center input {
+    border: none; outline: none; background: transparent;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px; color: var(--ink);
+    width: 100%;
+  }
+  .nav-center input::placeholder { color: var(--muted); }
+  .search-icon { color: var(--muted); font-size: 15px; flex-shrink: 0; }
+
+  .nav-right { display: flex; align-items: center; gap: 10px; }
+
+  .avatar {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: #c84a20;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-weight: 600; font-size: 13px;
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+  .avatar:hover { transform: scale(1.08); }
+  .avatar.a2 { background: var(--accent3); }
+  .avatar.a3 { background: var(--pink); }
+  .avatar-stack { display: flex; }
+  .avatar-stack .avatar { margin-left: -8px; border: 2px solid var(--bg); }
+  .avatar-stack .avatar:first-child { margin-left: 0; }
+
+  .btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 9px 18px;
+    border-radius: var(--pill-radius);
+    border: none; cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500; font-size: 14px;
+    transition: all 0.2s;
+  }
+  .btn-primary { background: var(--ink); color: white; }
+  .btn-primary:hover { background: #333; transform: translateY(-1px); }
+  .btn-outline { background: white; color: var(--ink); border: 1.5px solid rgba(0,0,0,0.12); }
+  .btn-outline:hover { border-color: var(--ink); }
+
+  /* ── MAIN LAYOUT ── */
+  .main-wrap {
+    padding-top: 70px;
+    min-height: 100vh;
+  }
+
+  /* ── CONTENT ── */
+  .content {
+    padding: 28px 32px;
+  }
+
+  /* ── FEED HEADER ── */
+  .feed-header {
+    margin-bottom: 20px;
+  }
+  .feed-title-row {
+    display: flex; align-items: baseline; gap: 10px;
+    margin-bottom: 12px;
+  }
+  .feed-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700; font-size: 22px;
+    letter-spacing: -0.3px;
+    flex-shrink: 0;
+  }
+  .feed-meta {
+    font-size: 13px; color: var(--muted);
+  }
+  .feed-sub {
+    display: flex; align-items: center; gap: 16px;
+  }
+
+  .filter-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .filter-btn {
+    padding: 7px 14px;
+    border-radius: var(--pill-radius);
+    border: 1.5px solid rgba(0,0,0,0.1);
+    background: white;
+    font-size: 13px; font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: #555;
+  }
+  .filter-btn:hover { border-color: var(--ink); color: var(--ink); }
+  .filter-btn.active { background: var(--ink); color: white; border-color: var(--ink); }
+
+  /* Custom tab styles */
+  .filter-btn .tab-delete {
+    display: none; align-items: center; justify-content: center;
+    margin-left: 4px; width: 14px; height: 14px;
+    border-radius: 50%; font-size: 11px; line-height: 1;
+    opacity: 0.5; transition: opacity 0.15s, background 0.15s;
+    vertical-align: middle; cursor: pointer;
+  }
+  .filter-btn:hover .tab-delete { display: inline-flex; }
+  .filter-btn:hover .tab-delete:hover { opacity: 1; background: rgba(0,0,0,0.15); }
+  .filter-btn.active .tab-delete:hover { background: rgba(255,255,255,0.25); }
+
+  .add-tab-btn {
+    padding: 7px 14px; border-radius: var(--pill-radius);
+    border: 1.5px dashed rgba(0,0,0,0.2); background: transparent;
+    font-size: 13px; cursor: pointer; color: #999;
+    transition: all 0.15s; display: inline-flex; align-items: center; gap: 4px;
+  }
+  .add-tab-btn:hover { border-color: var(--ink); color: var(--ink); }
+
+  .add-tab-inline {
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .add-tab-inline input {
+    padding: 7px 14px; border-radius: var(--pill-radius);
+    border: 1.5px solid var(--ink); font-size: 13px;
+    outline: none; width: 100px; background: var(--bg);
+    color: var(--ink); transition: border-color 0.15s;
+  }
+  .add-tab-inline input:focus { border-color: var(--ink); box-shadow: 0 0 0 3px rgba(0,0,0,0.08); }
+
+  /* ── MASONRY GRID ── */
+  .masonry {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  .masonry-col {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  /* Hide col 3+4 on smaller screens */
+  @media (max-width: 700px) {
+    .masonry-col:nth-child(3),
+    .masonry-col:nth-child(4) { display: none; }
+  }
+  @media (max-width: 480px) {
+    .masonry-col:nth-child(2) { display: none; }
+  }
+
+  .card {
+    width: 100%;
+    border-radius: var(--card-radius);
+    overflow: hidden;
+    background: white;
+    border: 1.5px solid rgba(0,0,0,0.05);
+    cursor: pointer;
+    transition: transform 0.22s, box-shadow 0.22s;
+    animation: fadeUp 0.4s ease both;
+  }
+  .card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 36px rgba(0,0,0,0.11);
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .card:nth-child(1) { animation-delay: 0.05s; }
+  .card:nth-child(2) { animation-delay: 0.1s; }
+  .card:nth-child(3) { animation-delay: 0.15s; }
+  .card:nth-child(4) { animation-delay: 0.2s; }
+
+  /* Image */
+  .card-img {
+    width: 100%;
+    display: block;
+    overflow: hidden;
+  }
+  .card-img img { width: 100%; display: block; }
+  .img-placeholder {
+    width: 100%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px;
+    color: rgba(255,255,255,0.25);
+  }
+
+  /* ── CARD BODY ── */
+  .card-body { padding: 12px 14px 14px; }
+
+  /* Title: hidden by default, show on hover */
+  .card-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 600; font-size: 14px;
+    line-height: 1.3; margin-bottom: 5px;
+    color: var(--ink);
+    max-height: 0; overflow: hidden; opacity: 0;
+    transition: max-height 0.25s ease, opacity 0.25s ease, margin 0.25s ease;
+    margin-bottom: 0;
+  }
+  .card:hover .card-title {
+    max-height: 60px; opacity: 1;
+    margin-bottom: 5px;
+  }
+
+  /* Highlight: always visible */
+  .card-highlight {
+    font-size: 12px;
+    color: #666;
+    line-height: 1.5;
+    margin-bottom: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    transition: margin 0.25s ease;
+  }
+  .card:hover .card-highlight {
+    margin-bottom: 8px;
+  }
+
+  /* Tags: hidden by default, show on hover */
+  .card-tags {
+    display: flex; flex-wrap: wrap; gap: 5px;
+    max-height: 0; overflow: hidden; opacity: 0;
+    transition: max-height 0.25s ease, opacity 0.25s ease, margin 0.25s ease;
+    margin-bottom: 0;
+  }
+  .card:hover .card-tags {
+    max-height: 60px; opacity: 1;
+    margin-bottom: 10px;
+  }
+  .card-tag {
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-weight: 500;
+  }
+  .ct-orange { background: #fff0ec; color: var(--accent); }
+  .ct-purple { background: #f0ecff; color: var(--accent2); }
+  .ct-green { background: #e8faf5; color: var(--accent3); }
+  .ct-yellow { background: #fff9e6; color: #b07800; }
+  .ct-pink { background: #fff0f4; color: #d63a6a; }
+
+  /* Footer: hidden by default, show on hover */
+  .card-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    border-top: 1px solid rgba(0,0,0,0.05);
+    max-height: 0; overflow: hidden; opacity: 0;
+    padding-top: 0;
+    transition: max-height 0.25s ease, opacity 0.25s ease, padding 0.25s ease;
+  }
+  .card:hover .card-footer {
+    max-height: 50px; opacity: 1;
+    padding-top: 10px;
+  }
+  .card-user {
+    display: flex; align-items: center; gap: 7px;
+    font-size: 12px; color: var(--muted);
+  }
+  .card-user-av {
+    width: 22px; height: 22px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; color: white;
+    flex-shrink: 0;
+  }
+  .card-actions { display: flex; gap: 6px; }
+  .card-action {
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    border: 1.5px solid rgba(0,0,0,0.1);
+    background: white;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    transition: all 0.15s;
+    color: #888;
+  }
+  .card-action:hover { border-color: var(--ink); color: var(--ink); }
+  .card-action.liked { border-color: var(--accent); background: #fff0ec; color: var(--accent); }
+  .card-action.liked svg path { fill: var(--accent); stroke: var(--accent); }
+  .card-action.edit-btn:hover { border-color: #2563EB; color: #2563EB; }
+  .card-action.delete-btn:hover { border-color: #DC2626; color: #DC2626; background: #FEF2F2; }
+
+  /* ── CONFIRM DIALOG ── */
+  .confirm-overlay {
+    position: fixed; inset: 0; z-index: 9999;
+    background: rgba(0,0,0,0.4); backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    animation: fadeIn 0.2s ease;
+  }
+  .confirm-dialog {
+    background: #fff; border-radius: 16px; padding: 28px 24px 20px;
+    max-width: 360px; width: 90%; text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    animation: scaleUp 0.25s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .confirm-dialog h3 { margin: 0 0 8px; font-size: 17px; font-weight: 700; }
+  .confirm-dialog p { margin: 0 0 20px; font-size: 14px; color: var(--muted); }
+  .confirm-actions { display: flex; gap: 10px; justify-content: center; }
+  .confirm-actions button {
+    flex: 1; padding: 10px 0; border-radius: 10px; font-size: 14px;
+    font-weight: 600; cursor: pointer; border: none; transition: all 0.15s;
+  }
+  .confirm-cancel { background: var(--card); color: var(--ink); }
+  .confirm-cancel:hover { background: #e5e5e5; }
+  .confirm-delete { background: #DC2626; color: #fff; }
+  .confirm-delete:hover { background: #B91C1C; }
+  @keyframes scaleUp { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+  /* ── UPLOAD PANEL ── */
+  /* ── GOOGLE LOGIN BUTTON ── */
+  .google-login-btn {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 16px;
+    border-radius: 100px;
+    border: 1.5px solid rgba(0,0,0,0.15);
+    background: white;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px; font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+  .google-login-btn:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.12); border-color: rgba(0,0,0,0.25); }
+
+  /* ── LOGIN PAGE ── */
+  #loginPage {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    z-index: 600;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column;
+  }
+  #loginPage.hidden { display: none; }
+  .login-card {
+    background: white;
+    border-radius: 28px;
+    padding: 48px 52px;
+    text-align: center;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.1);
+    max-width: 400px; width: 90%;
+  }
+  .login-logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800; font-size: 28px;
+    margin-bottom: 8px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .login-logo .logo-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
+  .login-logo span { color: var(--accent); }
+  .login-tagline { font-size: 14px; color: var(--muted); margin-bottom: 36px; line-height: 1.6; }
+  .login-google-btn {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%; padding: 14px 20px;
+    border-radius: 14px;
+    border: 1.5px solid rgba(0,0,0,0.12);
+    background: white;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px; font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--ink);
+  }
+  .login-google-btn:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.12); transform: translateY(-1px); }
+  .login-note { font-size: 11px; color: var(--muted); margin-top: 16px; }
+
+  .login-divider {
+    display: flex; align-items: center; gap: 12px;
+    margin: 20px 0 16px;
+    font-size: 12px; color: var(--muted);
+  }
+  .login-divider::before, .login-divider::after {
+    content: ''; flex: 1; height: 1px; background: rgba(0,0,0,0.1);
+  }
+
+  .demo-login-btn {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%; padding: 14px 20px;
+    border-radius: 14px;
+    border: 1.5px solid rgba(0,0,0,0.12);
+    background: white;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px; font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--ink);
+  }
+  .demo-login-btn:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.12); transform: translateY(-1px); background: var(--bg); }
+
+  .demo-input-group {
+    display: flex; gap: 8px; margin-bottom: 12px;
+  }
+  .demo-input-group input {
+    flex: 1; padding: 12px 16px;
+    border-radius: 12px;
+    border: 1.5px solid rgba(0,0,0,0.1);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px; color: var(--ink);
+    outline: none; background: var(--bg);
+    transition: border-color 0.15s;
+  }
+  .demo-input-group input:focus { border-color: var(--ink); background: white; }
+
+  .google-error-hint {
+    font-size: 12px; color: var(--accent);
+    margin-top: 8px; display: none;
+    line-height: 1.5;
+  }
+
+  /* ── EMPTY STATE ── */
+  #emptyState {
+    display: none;
+    flex-direction: column; align-items: center; justify-content: center;
+    padding: 80px 20px;
+    text-align: center;
+  }
+  #emptyState.visible { display: flex; }
+  .empty-icon { font-size: 56px; margin-bottom: 20px; }
+  .empty-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 22px; margin-bottom: 10px; }
+  .empty-sub { font-size: 14px; color: var(--muted); line-height: 1.7; margin-bottom: 28px; max-width: 320px; }
+  .empty-cta {
+    display: flex; align-items: center; gap: 8px;
+    padding: 14px 28px;
+    border-radius: 100px;
+    background: var(--ink); color: white;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px; font-weight: 600;
+    cursor: pointer; border: none;
+    transition: all 0.2s;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+  }
+  .empty-cta:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.22); }
+
+  .upload-trigger {
+    position: fixed;
+    bottom: 28px; right: 28px;
+    width: 54px; height: 54px;
+    border-radius: 50%;
+    background: var(--ink);
+    color: white;
+    font-size: 24px;
+    border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    transition: all 0.2s;
+    z-index: 200;
+  }
+  .upload-trigger:hover { transform: scale(1.08) rotate(45deg); background: var(--accent); }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(8px);
+    z-index: 500;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+  .modal {
+    background: white;
+    border-radius: 24px;
+    width: 580px;
+    max-width: calc(100vw - 32px);
+    max-height: 90vh;
+    overflow: hidden;
+    padding: 28px 32px 24px;
+    transform: translateY(20px) scale(0.97);
+    transition: transform 0.3s;
+    box-shadow: 0 32px 80px rgba(0,0,0,0.15);
+    display: flex;
+    flex-direction: column;
+  }
+  .modal-overlay.open .modal { transform: translateY(0) scale(1); }
+
+  .modal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .modal-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700; font-size: 20px;
+  }
+  .modal-close {
+    width: 34px; height: 34px;
+    border-radius: 10px;
+    border: 1.5px solid rgba(0,0,0,0.1);
+    background: none; cursor: pointer;
+    font-size: 16px; color: var(--muted);
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .modal-close:hover { background: var(--ink); color: white; border-color: var(--ink); }
+
+  .drop-zone {
+    border: 2px dashed rgba(0,0,0,0.15);
+    border-radius: 14px;
+    height: 160px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 16px;
+    background: var(--bg);
+    display: flex; align-items: center; gap: 14px;
+    justify-content: center;
+  }
+  .drop-zone:hover, .drop-zone.dragover {
+    border-color: var(--ink);
+    background: #f5f5f5;
+  }
+  .drop-icon { font-size: 26px; margin-bottom: 0; flex-shrink: 0; }
+  .drop-text { font-size: 13px; color: var(--muted); line-height: 1.4; text-align: left; }
+  .drop-text strong { color: var(--ink); }
+
+  .form-group { margin-bottom: 16px; }
+  .form-label {
+    display: block;
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 5px;
+  }
+  .form-input, .form-textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 1.5px solid rgba(0,0,0,0.1);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px; color: var(--ink);
+    background: var(--bg);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .form-input:focus, .form-textarea:focus { border-color: var(--ink); background: white; }
+  .form-textarea { resize: none; min-height: 64px; }
+
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  .modal-footer { margin-top: 16px; display: flex; gap: 10px; justify-content: flex-end; }
+  .modal-footer .btn { padding: 12px 28px; font-size: 15px; font-weight: 600; border-radius: 100px; }
+  .modal-footer .btn-outline { border: 2px solid rgba(0,0,0,0.15); }
+  .modal-footer .btn-outline:hover { border-color: var(--ink); background: var(--bg); }
+  .modal-footer .btn-primary { background: var(--ink); box-shadow: 0 4px 16px rgba(0,0,0,0.22); }
+  .modal-footer .btn-primary:hover { background: #222; transform: translateY(-2px); box-shadow: 0 6px 22px rgba(0,0,0,0.28); }
+
+  /* ── ONBOARDING TOAST ── */
+  .toast {
+    position: fixed; top: 90px; right: 24px;
+    background: white;
+    border-radius: 16px;
+    padding: 14px 18px;
+    display: flex; align-items: center; gap: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+    border: 1.5px solid rgba(0,0,0,0.06);
+    z-index: 600;
+    animation: slideIn 0.4s ease both;
+    font-size: 13px;
+    max-width: 300px;
+  }
+  @keyframes slideIn {
+    from { transform: translateX(120%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+  .toast-icon { font-size: 24px; flex-shrink: 0; }
+  .toast strong { display: block; font-weight: 600; margin-bottom: 2px; }
+  .toast span { color: var(--muted); line-height: 1.4; }
+
+  /* ── USER MENU ── */
+  .user-menu {
+    position: relative;
+  }
+  .my-avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: #c84a20;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-weight: 700; font-size: 14px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: 2.5px solid white;
+    box-shadow: 0 0 0 2px #c84a20;
+  }
+  .my-avatar:hover { transform: scale(1.07); }
+
+  .user-dropdown {
+    position: absolute; top: 100%; right: 0;
+    padding-top: 8px;
+    background: transparent;
+    min-width: 200px;
+    opacity: 0; pointer-events: none;
+    transform: translateY(-4px);
+    transition: opacity 0.2s, transform 0.2s;
+    z-index: 500;
+  }
+  .user-dropdown-inner {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.14);
+    border: 1.5px solid rgba(0,0,0,0.06);
+    padding: 8px;
+    overflow: hidden;
+  }
+  .user-menu:hover .user-dropdown,
+  .user-menu.open .user-dropdown {
+    opacity: 1; pointer-events: all;
+    transform: translateY(0);
+  }
+  .user-info {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 8px 10px;
+  }
+  .dropdown-divider {
+    height: 1px; background: rgba(0,0,0,0.06);
+    margin: 4px 0;
+  }
+  .dropdown-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 14px; font-weight: 500;
+    color: var(--ink);
+    transition: background 0.15s;
+  }
+  .dropdown-item:hover { background: var(--bg); }
+  .dropdown-item.logout { color: var(--accent); }
+  .dropdown-item.logout:hover { background: #fff0ec; }
+  .dropdown-icon { font-size: 14px; width: 18px; text-align: center; display: inline-flex; align-items: center; justify-content: center; }
+
+  /* ── MY INSPI PAGE ── */
+  #myInspiPage {
+    display: none;
+    position: fixed; inset: 0;
+    background: var(--bg);
+    z-index: 400;
+    overflow-y: auto;
+  }
+  #myInspiPage.active { display: block; }
+  .my-page-nav {
+    position: sticky; top: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 32px;
+    background: rgba(245,243,239,0.9);
+    backdrop-filter: blur(16px);
+    border-bottom: 1.5px solid rgba(0,0,0,0.06);
+    z-index: 10;
+  }
+  .my-page-back {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 14px; font-weight: 500;
+    cursor: pointer; color: var(--ink);
+    padding: 8px 14px;
+    border-radius: var(--pill-radius);
+    border: 1.5px solid rgba(0,0,0,0.1);
+    background: white;
+    transition: all 0.15s;
+  }
+  .my-page-back:hover { background: var(--ink); color: white; border-color: var(--ink); }
+  .my-page-content { padding: 32px 40px; max-width: 1400px; margin: 0 auto; }
+  .my-page-header { margin-bottom: 28px; }
+  .my-page-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700; font-size: 22px;
+    margin-bottom: 6px;
+  }
+
+  /* scroll styling */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 10px; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">
+    <span class="logo-dot"></span>
+    Inspi<span>Hub</span>
+  </div>
+  <div class="nav-center">
+    <span class="search-icon"><svg width="16" height="16" viewBox="0 0 20 20" fill="none"><circle cx="9" cy="9" r="6.5" stroke="currentColor" stroke-width="1.8"/><line x1="13.5" y1="13.5" x2="17.5" y2="17.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+    <input type="text" placeholder="搜索灵感、标签、上传者…">
+  </div>
+  <div class="nav-right">
+    <!-- Login button (shown when logged out) -->
+    <button class="google-login-btn" id="loginBtn" onclick="triggerGoogleLogin()">
+      <svg width="16" height="16" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.33 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.29-8.16 2.29-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.67 14.62 48 24 48z"/></svg>
+      使用 Google 登录
+    </button>
+    <!-- User menu (shown when logged in) -->
+    <div class="user-menu" id="userMenu" style="display:none">
+      <div class="avatar my-avatar" id="myAvatar" style="background:#c84a20;overflow:hidden">
+        <img id="avatarImg" src="" style="width:100%;height:100%;object-fit:cover;display:none">
+        <span id="avatarInitial">L</span>
+      </div>
+      <div class="user-dropdown" id="userDropdown">
+        <div class="user-dropdown-inner">
+          <div class="user-info">
+            <div class="avatar my-avatar" id="dropdownAvatar" style="width:40px;height:40px;font-size:16px;overflow:hidden">
+              <img id="dropdownAvatarImg" src="" style="width:100%;height:100%;object-fit:cover;display:none">
+              <span id="dropdownAvatarInitial">L</span>
+            </div>
+            <div>
+              <div style="font-weight:600;font-size:14px" id="dropdownName">用户</div>
+            </div>
+          </div>
+          <div class="dropdown-divider"></div>
+          <div class="dropdown-item" onclick="showMyInspi()">
+            <span class="dropdown-icon"><svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M8.14 4.37c.15 0 .3.05.43.15.13.09.22.23.27.38l.62 2.01c.19.61.51 1.17.94 1.62.43.46.95.8 1.53 1l1.89.65c.15.05.27.16.36.29.09.13.14.3.14.46s-.05.33-.14.46c-.09.13-.21.24-.36.29l-1.89.65c-.58.2-1.1.55-1.53 1-.43.46-.75 1.01-.94 1.62l-.62 2.01c-.05.15-.15.28-.27.38-.13.09-.28.15-.43.15s-.3-.05-.43-.15c-.13-.09-.22-.23-.27-.38l-.62-2.01c-.14-.45-.35-.87-.62-1.24a3.5 3.5 0 00-.95-.96c-.43-.45-.95-.8-1.53-1l-1.89-.65c-.15-.05-.27-.16-.36-.29A.8.8 0 012 10.94c0-.17.05-.33.14-.46.09-.13.21-.24.36-.29l1.89-.65c.57-.21 1.08-.55 1.5-1 .41-.44.72-.97.91-1.56l.02-.05.62-2.01c.05-.15.15-.28.27-.38.13-.09.28-.15.43-.15zm6.2-1.87c.07-.06.13-.04.18 0 .06.04.1.1.12.16l.26.86c.08.26.22.5.41.7.18.19.41.34.66.43l.81.28c.06.02.11.06.15.12.04.06.06.13.06.2s-.02.14-.06.2c-.04.06-.1.1-.15.12l-.81.28c-.25.09-.48.24-.66.43-.18.2-.32.43-.41.7l-.27.86c-.02.06-.06.11-.12.16a.26.26 0 01-.18.06c-.07 0-.13-.02-.18-.06a.39.39 0 01-.12-.16l-.26-.86c-.06-.19-.15-.35-.27-.47a1.4 1.4 0 00-.52-.39l-.81-.28a.33.33 0 01-.15-.12.3.3 0 010-.4c.04-.06.1-.1.15-.12l.81-.28c.2-.07.38-.18.52-.39.12-.13.21-.28.27-.47l.26-.86c.02-.06.06-.12.12-.16z" fill="currentColor"/></svg></span> 我的灵感
+          </div>
+          <div class="dropdown-item logout" onclick="handleLogout()">
+            <span class="dropdown-icon"><svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M7 17H4a2 2 0 01-2-2V5a2 2 0 012-2h3M13 14l4-4-4-4M17 10H7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span> 退出登录
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div class="main-wrap">
+
+
+  <!-- CONTENT -->
+  <main class="content">
+    <div class="feed-header">
+      <div class="feed-title-row">
+        <span class="feed-title">全部灵感 <svg width="14" height="14" viewBox="0 0 20 20" fill="none" style="vertical-align:-1px"><path d="M8.14 4.37c.15 0 .3.05.43.15.13.09.22.23.27.38l.62 2.01c.19.61.51 1.17.94 1.62.43.46.95.8 1.53 1l1.89.65c.15.05.27.16.36.29.09.13.14.3.14.46s-.05.33-.14.46c-.09.13-.21.24-.36.29l-1.89.65c-.58.2-1.1.55-1.53 1-.43.46-.75 1.01-.94 1.62l-.62 2.01c-.05.15-.15.28-.27.38-.13.09-.28.15-.43.15s-.3-.05-.43-.15c-.13-.09-.22-.23-.27-.38l-.62-2.01c-.14-.45-.35-.87-.62-1.24a3.5 3.5 0 00-.95-.96c-.43-.45-.95-.8-1.53-1l-1.89-.65c-.15-.05-.27-.16-.36-.29A.8.8 0 012 10.94c0-.17.05-.33.14-.46.09-.13.21-.24.36-.29l1.89-.65c.57-.21 1.08-.55 1.5-1 .41-.44.72-.97.91-1.56l.02-.05.62-2.01c.05-.15.15-.28.27-.38.13-.09.28-.15.43-.15zm6.2-1.87c.07-.06.13-.04.18 0 .06.04.1.1.12.16l.26.86c.08.26.22.5.41.7.18.19.41.34.66.43l.81.28c.06.02.11.06.15.12.04.06.06.13.06.2s-.02.14-.06.2c-.04.06-.1.1-.15.12l-.81.28c-.25.09-.48.24-.66.43-.18.2-.32.43-.41.7l-.27.86c-.02.06-.06.11-.12.16a.26.26 0 01-.18.06c-.07 0-.13-.02-.18-.06a.39.39 0 01-.12-.16l-.26-.86c-.06-.19-.15-.35-.27-.47a1.4 1.4 0 00-.52-.39l-.81-.28a.33.33 0 01-.15-.12.3.3 0 010-.4c.04-.06.1-.1.15-.12l.81-.28c.2-.07.38-.18.52-.39.12-.13.21-.28.27-.47l.26-.86c.02-.06.06-.12.12-.16z" fill="currentColor"/></svg></span>
+        <span class="feed-meta" id="feedMeta">0 条灵感 · 0 位设计师在贡献</span>
+      </div>
+      <div class="feed-sub">
+        <div class="filter-row">
+          <button class="filter-btn active" onclick="filterByCategory(this,'all')">全部</button>
+          <button class="filter-btn" onclick="filterByCategory(this,'最新')">最新</button>
+          <button class="filter-btn" onclick="filterByCategory(this,'web')">Web</button>
+          <button class="filter-btn" onclick="filterByCategory(this,'移动端')">移动端</button>
+          <button class="filter-btn" onclick="filterByCategory(this,'client')">Client</button>
+          <button class="filter-btn" onclick="filterByCategory(this,'运营')">运营</button>
+          <button class="filter-btn" onclick="filterByCategory(this,'动效')">动效</button>
+          <button class="filter-btn" onclick="filterByCategory(this,'插图')">插图</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MASONRY -->
+    <div class="masonry" id="grid">
+      <div class="masonry-col"></div>
+      <div class="masonry-col"></div>
+      <div class="masonry-col"></div>
+      <div class="masonry-col"></div>
+    </div>
+
+    <!-- EMPTY STATE -->
+    <div id="emptyState">
+      <div class="empty-icon"><svg width="48" height="48" viewBox="0 0 20 20" fill="none"><path d="M8.14 4.37c.15 0 .3.05.43.15.13.09.22.23.27.38l.62 2.01c.19.61.51 1.17.94 1.62.43.46.95.8 1.53 1l1.89.65c.15.05.27.16.36.29.09.13.14.3.14.46s-.05.33-.14.46c-.09.13-.21.24-.36.29l-1.89.65c-.58.2-1.1.55-1.53 1-.43.46-.75 1.01-.94 1.62l-.62 2.01c-.05.15-.15.28-.27.38-.13.09-.28.15-.43.15s-.3-.05-.43-.15c-.13-.09-.22-.23-.27-.38l-.62-2.01c-.14-.45-.35-.87-.62-1.24a3.5 3.5 0 00-.95-.96c-.43-.45-.95-.8-1.53-1l-1.89-.65c-.15-.05-.27-.16-.36-.29A.8.8 0 012 10.94c0-.17.05-.33.14-.46.09-.13.21-.24.36-.29l1.89-.65c.57-.21 1.08-.55 1.5-1 .41-.44.72-.97.91-1.56l.02-.05.62-2.01c.05-.15.15-.28.27-.38.13-.09.28-.15.43-.15zm6.2-1.87c.07-.06.13-.04.18 0 .06.04.1.1.12.16l.26.86c.08.26.22.5.41.7.18.19.41.34.66.43l.81.28c.06.02.11.06.15.12.04.06.06.13.06.2s-.02.14-.06.2c-.04.06-.1.1-.15.12l-.81.28c-.25.09-.48.24-.66.43-.18.2-.32.43-.41.7l-.27.86c-.02.06-.06.11-.12.16a.26.26 0 01-.18.06c-.07 0-.13-.02-.18-.06a.39.39 0 01-.12-.16l-.26-.86c-.06-.19-.15-.35-.27-.47a1.4 1.4 0 00-.52-.39l-.81-.28a.33.33 0 01-.15-.12.3.3 0 010-.4c.04-.06.1-.1.15-.12l.81-.28c.2-.07.38-.18.52-.39.12-.13.21-.28.27-.47l.26-.86c.02-.06.06-.12.12-.16z" fill="currentColor"/></svg></div>
+      <div class="empty-title">还没有灵感，来发第一条吧</div>
+      <p class="empty-sub">把你看到的好设计截图上传，记录亮点和可复用思路，和团队一起积累设计资产</p>
+      <button class="empty-cta" onclick="openModal()">＋ 发布第一条灵感</button>
+    </div>
+
+  </main>
+</div>
+
+<!-- LOGIN PAGE -->
+<div id="loginPage">
+  <div class="login-card">
+    <div class="login-logo">
+      <span class="logo-dot"></span>
+      Inspi<span>Hub</span>
+    </div>
+    <p class="login-tagline">团队设计灵感共享平台<br>记录、沉淀、复用每一个好设计</p>
+    <!-- Google 官方按钮（自动渲染） -->
+    <div id="googleBtnContainer" style="display:flex;justify-content:center;margin:16px 0 8px"></div>
+    <p class="google-error-hint" id="googleErrorHint">⚠️ Google 登录需要在 HTTPS 环境下使用<br>你可以使用下方的快捷登录体验功能</p>
+
+    <div class="login-divider">或</div>
+
+    <!-- Demo / 快捷登录 -->
+    <div class="demo-input-group">
+      <input type="text" id="demoNameInput" placeholder="输入你的昵称（如: 小明）">
+    </div>
+    <button class="demo-login-btn" onclick="handleDemoLogin()">
+      🚀 快捷登录体验
+    </button>
+
+    <p class="login-note">登录即表示你同意我们的使用条款</p>
+  </div>
+</div>
+
+<!-- LIGHTBOX -->
+<div id="lightbox" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;padding:20px" onclick="closeLightbox()">
+  <button style="position:absolute;top:20px;right:24px;background:none;border:none;color:#fff;font-size:28px;cursor:pointer;line-height:1" onclick="closeLightbox()">✕</button>
+  <img id="lightboxImg" src="" style="max-width:90vw;max-height:88vh;object-fit:contain;border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,0.5)">
+</div>
+
+<!-- UPLOAD BUTTON -->
+<button class="upload-trigger" id="uploadTrigger">＋</button>
+
+<!-- UPLOAD MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="handleOverlayClick(event)">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <div class="modal-title">上传灵感 <svg width="16" height="16" viewBox="0 0 20 20" fill="none" style="vertical-align:-2px"><path d="M8.14 4.37c.15 0 .3.05.43.15.13.09.22.23.27.38l.62 2.01c.19.61.51 1.17.94 1.62.43.46.95.8 1.53 1l1.89.65c.15.05.27.16.36.29.09.13.14.3.14.46s-.05.33-.14.46c-.09.13-.21.24-.36.29l-1.89.65c-.58.2-1.1.55-1.53 1-.43.46-.75 1.01-.94 1.62l-.62 2.01c-.05.15-.15.28-.27.38-.13.09-.28.15-.43.15s-.3-.05-.43-.15c-.13-.09-.22-.23-.27-.38l-.62-2.01c-.14-.45-.35-.87-.62-1.24a3.5 3.5 0 00-.95-.96c-.43-.45-.95-.8-1.53-1l-1.89-.65c-.15-.05-.27-.16-.36-.29A.8.8 0 012 10.94c0-.17.05-.33.14-.46.09-.13.21-.24.36-.29l1.89-.65c.57-.21 1.08-.55 1.5-1 .41-.44.72-.97.91-1.56l.02-.05.62-2.01c.05-.15.15-.28.27-.38.13-.09.28-.15.43-.15zm6.2-1.87c.07-.06.13-.04.18 0 .06.04.1.1.12.16l.26.86c.08.26.22.5.41.7.18.19.41.34.66.43l.81.28c.06.02.11.06.15.12.04.06.06.13.06.2s-.02.14-.06.2c-.04.06-.1.1-.15.12l-.81.28c-.25.09-.48.24-.66.43-.18.2-.32.43-.41.7l-.27.86c-.02.06-.06.11-.12.16a.26.26 0 01-.18.06c-.07 0-.13-.02-.18-.06a.39.39 0 01-.12-.16l-.26-.86c-.06-.19-.15-.35-.27-.47a1.4 1.4 0 00-.52-.39l-.81-.28a.33.33 0 01-.15-.12.3.3 0 010-.4c.04-.06.1-.1.15-.12l.81-.28c.2-.07.38-.18.52-.39.12-.13.21-.28.27-.47l.26-.86c.02-.06.06-.12.12-.16z" fill="currentColor"/></svg></div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+
+    <!-- Drop Zone -->
+    <div class="drop-zone" id="dropZone">
+      <div class="drop-icon"><svg width="28" height="28" viewBox="0 0 20 20" fill="none"><rect x="2.5" y="3.5" width="15" height="13" rx="2" stroke="currentColor" stroke-width="1.5"/><circle cx="7" cy="8" r="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M2.5 13.5l4-3.5 3 2.5 3-4 5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="drop-text">
+        <strong>拖拽图片 / 截图</strong> 到这里 · 点击选择文件 · Ctrl+V 粘贴
+      </div>
+    </div>
+    <input type="file" id="fileInput" accept="image/*" style="display:none">
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">产品名称/类型 *</label>
+        <input type="text" id="inputTitle" class="form-input" placeholder="给这条灵感起个名字">
+      </div>
+      <div class="form-group">
+        <label class="form-label">来源链接</label>
+        <input type="text" id="inputUrl" class="form-input" placeholder="https://...">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" style="vertical-align:-2px"><path d="M10 2a5.5 5.5 0 00-2 10.63V14a1 1 0 001 1h2a1 1 0 001-1v-1.37A5.5 5.5 0 0010 2zm-1 15a1 1 0 001 1h0a1 1 0 001-1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> 亮点/可复用点 *</label>
+      <textarea id="inputHighlight" class="form-textarea" placeholder="这个设计哪里吸引你？有哪些可复用的思路或元素？" style="min-height:72px"></textarea>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">标签 *</label>
+      <input type="text" id="inputTags" class="form-input" placeholder="排版、品牌、动效… 用逗号分隔">
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="submitUpload()">发布灵感 →</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- MY INSPI PAGE -->
+<div id="myInspiPage">
+  <div class="my-page-nav">
+    <div class="my-page-back" onclick="closeMyInspi()">← 返回全部灵感</div>
+    <div class="nav-logo" style="position:static">
+      <span class="logo-dot"></span>
+      Inspi<span style="color:var(--accent)">Hub</span>
+    </div>
+    <div style="width:140px"></div>
+  </div>
+  <div class="my-page-content">
+    <div class="my-page-header">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px">
+        <div class="my-avatar" id="myPageAvatar" style="width:52px;height:52px;font-size:22px;pointer-events:none;border-radius:50%">L</div>
+        <div>
+          <div class="my-page-title" id="myPageTitle">我的灵感</div>
+          <div style="font-size:13px;color:var(--muted)" id="myPageStats">共 0 条上传</div>
+        </div>
+      </div>
+      <div class="filter-row" id="myInspiFilterRow" style="margin-bottom:20px">
+        <button class="filter-btn active" onclick="filterMyInspi(this,'all')">全部</button>
+        <!-- dynamic tabs rendered by JS -->
+      </div>
+    </div>
+    <div class="masonry" id="myGrid">
+      <div class="masonry-col"></div>
+      <div class="masonry-col"></div>
+      <div class="masonry-col"></div>
+      <div class="masonry-col"></div>
+    </div>
+    <div id="myEmptyState" style="display:none;flex-direction:column;align-items:center;padding:80px 20px;text-align:center">
+      <div style="font-size:48px;margin-bottom:16px"><svg width="48" height="48" viewBox="0 0 20 20" fill="none"><path d="M8.14 4.37c.15 0 .3.05.43.15.13.09.22.23.27.38l.62 2.01c.19.61.51 1.17.94 1.62.43.46.95.8 1.53 1l1.89.65c.15.05.27.16.36.29.09.13.14.3.14.46s-.05.33-.14.46c-.09.13-.21.24-.36.29l-1.89.65c-.58.2-1.1.55-1.53 1-.43.46-.75 1.01-.94 1.62l-.62 2.01c-.05.15-.15.28-.27.38-.13.09-.28.15-.43.15s-.3-.05-.43-.15c-.13-.09-.22-.23-.27-.38l-.62-2.01c-.14-.45-.35-.87-.62-1.24a3.5 3.5 0 00-.95-.96c-.43-.45-.95-.8-1.53-1l-1.89-.65c-.15-.05-.27-.16-.36-.29A.8.8 0 012 10.94c0-.17.05-.33.14-.46.09-.13.21-.24.36-.29l1.89-.65c.57-.21 1.08-.55 1.5-1 .41-.44.72-.97.91-1.56l.02-.05.62-2.01c.05-.15.15-.28.27-.38.13-.09.28-.15.43-.15zm6.2-1.87c.07-.06.13-.04.18 0 .06.04.1.1.12.16l.26.86c.08.26.22.5.41.7.18.19.41.34.66.43l.81.28c.06.02.11.06.15.12.04.06.06.13.06.2s-.02.14-.06.2c-.04.06-.1.1-.15.12l-.81.28c-.25.09-.48.24-.66.43-.18.2-.32.43-.41.7l-.27.86c-.02.06-.06.11-.12.16a.26.26 0 01-.18.06c-.07 0-.13-.02-.18-.06a.39.39 0 01-.12-.16l-.26-.86c-.06-.19-.15-.35-.27-.47a1.4 1.4 0 00-.52-.39l-.81-.28a.33.33 0 01-.15-.12.3.3 0 010-.4c.04-.06.1-.1.15-.12l.81-.28c.2-.07.38-.18.52-.39.12-.13.21-.28.27-.47l.26-.86c.02-.06.06-.12.12-.16z" fill="currentColor"/></svg></div>
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:20px;margin-bottom:8px">还没有灵感，来发第一条吧</div>
+      <p style="font-size:14px;color:var(--muted);margin-bottom:24px">把你看到的好设计截图上传，记录亮点和可复用思路</p>
+      <button class="empty-cta" onclick="closeMyInspi();setTimeout(openModal,300)">＋ 发布第一条灵感</button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+  // ── Current user ──
+  let currentUser = null;
+  let googleSDKReady = false;
+  let editingInspirationId = null;
+
+  // ── Google Login ──
+  function initGoogleSDK() {
+    if (typeof google !== 'undefined' && google.accounts) {
+      googleSDKReady = true;
+      return true;
+    }
+    return false;
+  }
+
+  function triggerGoogleLogin() {
+    if (!initGoogleSDK()) {
+      // SDK not loaded, show hint & focus on demo login
+      document.getElementById('googleErrorHint').style.display = 'block';
+      showToastMsg('⚠️', 'Google 登录不可用', '请使用快捷登录体验功能');
+      return;
+    }
+    try {
+      google.accounts.id.initialize({
+        client_id: '1042556696855-g3kj8dj9fah41sanbkag73ev0ejfn36r.apps.googleusercontent.com',
+        callback: handleGoogleCredential,
+        ux_mode: 'popup',
+        cancel_on_tap_outside: false
+      });
+      google.accounts.id.prompt((notification) => {
+        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+          // One-tap not available, try rendering button as fallback
+          google.accounts.id.renderButton(
+            document.getElementById('googleBtnContainer'),
+            { type: 'standard', shape: 'pill', theme: 'outline', text: 'signin_with', size: 'large', locale: 'zh_CN', width: 280 }
+          );
+        }
+      });
+    } catch(e) {
+      console.error('Google login error:', e);
+      document.getElementById('googleErrorHint').style.display = 'block';
+    }
+  }
+
+  function handleGoogleCredential(response) {
+    console.log('Google credential received:', response ? 'yes' : 'no');
+    try {
+      const base64 = response.credential.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+      const json = decodeURIComponent(atob(base64).split('').map(c =>
+        '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+      ).join(''));
+      const payload = JSON.parse(json);
+      const email = payload.email;
+      const googleName = payload.name || payload.given_name || '';
+      const initial = googleName ? Array.from(googleName)[0].toUpperCase() : email[0].toUpperCase();
+      loginWithUser({
+        name: googleName || email.split('@')[0],
+        email: email,
+        picture: payload.picture,
+        initial: initial
+      });
+    } catch(e) {
+      console.error('handleGoogleCredential error:', e);
+      try {
+        const payload = JSON.parse(atob(response.credential.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
+        loginWithUser({
+          name: payload.email.split('@')[0],
+          email: payload.email,
+          picture: payload.picture || null,
+          initial: payload.email[0].toUpperCase()
+        });
+      } catch(e2) {
+        console.error('Fallback also failed:', e2);
+      }
+    }
+  }
+
+  // ── Demo / Quick Login ──
+  function handleDemoLogin() {
+    const nameInput = document.getElementById('demoNameInput');
+    const name = nameInput.value.trim();
+    if (!name) {
+      nameInput.style.borderColor = 'var(--accent)';
+      nameInput.focus();
+      nameInput.setAttribute('placeholder', '请输入昵称后登录');
+      return;
+    }
+    const initial = Array.from(name)[0].toUpperCase();
+    const email = name + '@inspihub.local';
+    loginWithUser({
+      name: name,
+      email: email,
+      picture: null,
+      initial: initial
+    });
+  }
+  // Allow Enter key in demo input
+  document.addEventListener('DOMContentLoaded', () => {
+    const demoInput = document.getElementById('demoNameInput');
+    if (demoInput) {
+      demoInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter') handleDemoLogin();
+      });
+    }
+  });
+
+  function loginWithUser(user) {
+    currentUser = user;
+    localStorage.setItem('inspihub_user', JSON.stringify(user));
+
+    // Update nav avatar
+    document.getElementById('avatarInitial').textContent = user.initial;
+    document.getElementById('myAvatar').style.background = getAvatarColor(user.email);
+    document.getElementById('dropdownAvatar').style.background = getAvatarColor(user.email);
+    document.getElementById('dropdownAvatarInitial').textContent = user.initial;
+    document.getElementById('dropdownName').textContent = user.name;
+
+    if (user.picture) {
+      document.getElementById('avatarImg').src = user.picture;
+      document.getElementById('avatarImg').style.display = 'block';
+      document.getElementById('avatarInitial').style.display = 'none';
+      document.getElementById('dropdownAvatarImg').src = user.picture;
+      document.getElementById('dropdownAvatarImg').style.display = 'block';
+      document.getElementById('dropdownAvatarInitial').style.display = 'none';
+      document.getElementById('myPageAvatar').style.background = 'none';
+      document.getElementById('myPageAvatar').style.padding = '0';
+      document.getElementById('myPageAvatar').innerHTML = `<img src="${user.picture}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+    } else {
+      document.getElementById('avatarImg').style.display = 'none';
+      document.getElementById('avatarInitial').style.display = '';
+      document.getElementById('dropdownAvatarImg').style.display = 'none';
+      document.getElementById('dropdownAvatarInitial').style.display = '';
+      document.getElementById('myPageAvatar').textContent = user.initial;
+      document.getElementById('myPageAvatar').style.background = getAvatarColor(user.email);
+    }
+
+    document.getElementById('loginBtn').style.display = 'none';
+    document.getElementById('userMenu').style.display = 'flex';
+
+    // Update my inspi page header
+    const displayName = user.name || user.email.split('@')[0];
+    document.getElementById('myPageTitle').textContent = displayName + ' 的灵感';
+
+    // Hide login page, show upload button
+    document.getElementById('loginPage').classList.add('hidden');
+    document.getElementById('uploadTrigger').style.display = 'flex';
+
+    loadInspirations();
+  }
+
+  function handleLogout() {
+    currentUser = null;
+    localStorage.removeItem('inspihub_user');
+    document.getElementById('userMenu').classList.remove('open');
+    document.getElementById('userMenu').style.display = 'none';
+    document.getElementById('loginBtn').style.display = 'flex';
+    document.getElementById('uploadTrigger').style.display = 'none';
+    document.getElementById('loginPage').classList.remove('hidden');
+    // Clear grid cards
+    document.querySelectorAll('#grid .masonry-col').forEach(col => {
+      col.innerHTML = '';
+    });
+    // Clear my inspi page
+    document.querySelectorAll('#myGrid .masonry-col').forEach(col => {
+      col.innerHTML = '';
+    });
+    // Reset feed meta
+    document.getElementById('feedMeta').textContent = '0 条灵感 · 0 位设计师在贡献';
+    checkEmptyState();
+  }
+
+  // ── Navigation ──
+  function showMyInspi() {
+    document.getElementById('myInspiPage').classList.add('active');
+    document.getElementById('myInspiPage').scrollTop = 0;
+    document.getElementById('userMenu').classList.remove('open');
+    refreshMyInspiPage();
+  }
+  function closeMyInspi() {
+    document.getElementById('myInspiPage').classList.remove('active');
+  }
+
+  // ── Avatar dropdown ──
+  document.getElementById('myAvatar').addEventListener('click', e => {
+    e.stopPropagation();
+    document.getElementById('userMenu').classList.toggle('open');
+  });
+  document.addEventListener('click', e => {
+    const menu = document.getElementById('userMenu');
+    if (menu && !menu.contains(e.target)) menu.classList.remove('open');
+  });
+
+  // ── Upload modal ──
+  document.getElementById('uploadTrigger').addEventListener('click', function() {
+    document.getElementById('modalOverlay').classList.add('open');
+  });
+  function openModal() {
+    document.getElementById('modalOverlay').classList.add('open');
+  }
+  function closeModal() {
+    document.getElementById('modalOverlay').classList.remove('open');
+    // Reset to upload mode if was editing
+    if (editingInspirationId) {
+      editingInspirationId = null;
+      resetModalToUpload();
+    }
+  }
+  function handleOverlayClick(e) {
+    if (e.target === document.getElementById('modalOverlay')) closeModal();
+  }
+
+  // ── Drag & drop (only JS handlers, removed duplicate HTML attributes) ──
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+
+  dropZone.addEventListener('dragover', e => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+  });
+  dropZone.addEventListener('dragleave', () => {
+    dropZone.classList.remove('dragover');
+  });
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    const files = e.dataTransfer.files;
+    if (files.length) showFilePreviewAndStore(files[0]);
+  });
+  dropZone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', e => {
+    if (e.target.files.length) showFilePreviewAndStore(e.target.files[0]);
+  });
+
+  let uploadedImageData = null;
+
+  function showFilePreview(file) {
+    const url = URL.createObjectURL(file);
+    dropZone.innerHTML = `<img src="${url}" style="width:100%;max-height:120px;object-fit:contain;border-radius:10px">`;
+    dropZone.style.padding = '10px';
+  }
+  function showFilePreviewAndStore(file) {
+    const reader = new FileReader();
+    reader.onload = e => { uploadedImageData = e.target.result; };
+    reader.readAsDataURL(file);
+    showFilePreview(file);
+  }
+
+  // Paste support
+  document.addEventListener('paste', e => {
+    const items = e.clipboardData.items;
+    for (let item of items) {
+      if (item.type.startsWith('image/')) {
+        if (document.getElementById('modalOverlay').classList.contains('open')) {
+          showFilePreviewAndStore(item.getAsFile());
+        }
+      }
+    }
+  });
+
+  // ── Search ──
+  (function initSearch() {
+    const searchInput = document.querySelector('.nav-center input');
+    let searchTimeout = null;
+    searchInput.addEventListener('input', function() {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => performSearch(this.value.trim()), 250);
+    });
+    searchInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        clearTimeout(searchTimeout);
+        performSearch(this.value.trim());
+      }
+    });
+  })();
+
+  function performSearch(query) {
+    const cols = document.querySelectorAll('#grid .masonry-col');
+    cols.forEach(col => col.innerHTML = '');
+    try {
+      const raw = localStorage.getItem('inspihub_inspirations');
+      const items = raw ? JSON.parse(raw) : [];
+      if (!query) {
+        [...items].reverse().forEach(item => addCardToGrid(item));
+      } else {
+        const q = query.toLowerCase();
+        const filtered = items.filter(item =>
+          (item.title || '').toLowerCase().includes(q) ||
+          (item.highlight || '').toLowerCase().includes(q) ||
+          (item.tags || []).some(t => t.toLowerCase().includes(q)) ||
+          (item.author || '').toLowerCase().includes(q) ||
+          (item.authorEmail || '').toLowerCase().includes(q)
+        );
+        [...filtered].reverse().forEach(item => addCardToGrid(item));
+      }
+      checkEmptyState();
+      // Reset filter buttons
+      document.querySelectorAll('.feed-header .filter-btn').forEach(b => b.classList.remove('active'));
+      document.querySelector('.feed-header .filter-btn')?.classList.add('active');
+    } catch(e) {}
+  }
+
+  // ── Toast helper ──
+  function showToastMsg(icon, title, msg) {
+    const t = document.createElement('div');
+    t.className = 'toast';
+    t.style.top = '90px';
+    t.innerHTML = `<div class="toast-icon">${icon}</div><div><strong>${title}</strong><span>${msg}</span></div>`;
+    document.body.appendChild(t);
+    setTimeout(() => t.style.transition = 'opacity 0.5s', 2500);
+    setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 500); }, 3000);
+  }
+
+  // ── Favorites (persistent) ──
+  function getFavorites() {
+    try { return JSON.parse(localStorage.getItem('inspihub_favorites') || '[]'); } catch(e) { return []; }
+  }
+  function isFavorited(id) {
+    return getFavorites().includes(id);
+  }
+  function toggleFavorite(btn, id) {
+    let favs = getFavorites();
+    if (favs.includes(id)) {
+      favs = favs.filter(f => f !== id);
+      btn.classList.remove('liked');
+    } else {
+      favs.push(id);
+      btn.classList.add('liked');
+    }
+    localStorage.setItem('inspihub_favorites', JSON.stringify(favs));
+  }
+
+  // ── Delete Inspiration ──
+  function confirmDeleteInspiration(id) {
+    const overlay = document.createElement('div');
+    overlay.className = 'confirm-overlay';
+    overlay.innerHTML = `
+      <div class="confirm-dialog">
+        <h3>确认删除</h3>
+        <p>删除后将无法恢复，确定要删除这条灵感吗？</p>
+        <div class="confirm-actions">
+          <button class="confirm-cancel" onclick="this.closest('.confirm-overlay').remove()">取消</button>
+          <button class="confirm-delete" onclick="deleteInspiration(${id});this.closest('.confirm-overlay').remove()">删除</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', function(e) {
+      if (e.target === overlay) overlay.remove();
+    });
+  }
+
+  function deleteInspiration(id) {
+    try {
+      const raw = localStorage.getItem('inspihub_inspirations');
+      let items = raw ? JSON.parse(raw) : [];
+      items = items.filter(i => i.id !== id);
+      localStorage.setItem('inspihub_inspirations', JSON.stringify(items));
+    } catch(e) {}
+    loadInspirations();
+    showToastMsg('🗑️', '已删除', '灵感已从列表中移除');
+  }
+
+  // ── Share Inspiration (copy link) ──
+  function shareInspiration(id) {
+    try {
+      const raw = localStorage.getItem('inspihub_inspirations');
+      const items = raw ? JSON.parse(raw) : [];
+      const item = items.find(i => i.id === id);
+      const link = (item && item.url) ? item.url : window.location.href;
+      navigator.clipboard.writeText(link).then(() => {
+        showToastMsg('🔗', '链接已复制', item && item.url ? '来源链接已复制到剪贴板' : '页面链接已复制到剪贴板');
+      }).catch(() => {
+        // Fallback for older browsers
+        const ta = document.createElement('textarea');
+        ta.value = link;
+        ta.style.cssText = 'position:fixed;opacity:0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        ta.remove();
+        showToastMsg('🔗', '链接已复制', item && item.url ? '来源链接已复制到剪贴板' : '页面链接已复制到剪贴板');
+      });
+    } catch(e) {
+      showToastMsg('⚠️', '复制失败', '请手动复制链接');
+    }
+  }
+
+  // ── Edit Inspiration ──
+
+  function editInspiration(id) {
+    try {
+      const raw = localStorage.getItem('inspihub_inspirations');
+      const items = raw ? JSON.parse(raw) : [];
+      const item = items.find(i => i.id === id);
+      if (!item) return;
+
+      editingInspirationId = id;
+
+      // Fill the modal form with existing data
+      document.getElementById('inputTitle').value = item.title || '';
+      document.getElementById('inputHighlight').value = item.highlight || '';
+      document.getElementById('inputTags').value = (item.tags || []).join('、');
+      document.getElementById('inputUrl').value = item.url || '';
+
+      // Set image if exists
+      if (item.image) {
+        uploadedImageData = item.image;
+        const dropZone = document.getElementById('dropZone');
+        dropZone.innerHTML = `<img src="${item.image}" style="max-height:160px;max-width:100%;border-radius:8px;object-fit:contain">`;
+        dropZone.style.padding = '12px';
+      }
+
+      // Update modal title and button
+      document.querySelector('.modal-title').innerHTML = '编辑灵感 <svg width="16" height="16" viewBox="0 0 20 20" fill="none" style="vertical-align:-2px"><path d="M14.85 2.85a1.5 1.5 0 012.12 0l.18.18a1.5 1.5 0 010 2.12L7.5 14.8l-3.3.82.82-3.3L14.85 2.85z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M12.5 5.5l2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+      document.querySelector('.modal-footer .btn-primary').textContent = '保存修改';
+      document.querySelector('.modal-footer .btn-primary').setAttribute('onclick', 'submitEdit()');
+
+      openModal();
+    } catch(e) { console.error(e); }
+  }
+
+  function submitEdit() {
+    if (!editingInspirationId) return;
+
+    const title = document.getElementById('inputTitle').value.trim();
+    const highlight = document.getElementById('inputHighlight').value.trim();
+    const tagsRaw = document.getElementById('inputTags').value.trim();
+
+    if (!title) {
+      document.getElementById('inputTitle').style.borderColor = 'var(--accent)';
+      document.getElementById('inputTitle').focus();
+      return;
+    }
+
+    const tags = tagsRaw ? tagsRaw.split(/[,，、]+/).map(t => t.trim()).filter(Boolean) : [];
+
+    try {
+      const raw = localStorage.getItem('inspihub_inspirations');
+      let items = raw ? JSON.parse(raw) : [];
+      const idx = items.findIndex(i => i.id === editingInspirationId);
+      if (idx >= 0) {
+        items[idx].title = title;
+        items[idx].highlight = highlight;
+        items[idx].tags = tags;
+        items[idx].url = document.getElementById('inputUrl').value.trim();
+        if (uploadedImageData) items[idx].image = uploadedImageData;
+        localStorage.setItem('inspihub_inspirations', JSON.stringify(items));
+      }
+    } catch(e) {}
+
+    // Reset edit state
+    editingInspirationId = null;
+    resetModalToUpload();
+    closeModal();
+    loadInspirations();
+    showToastMsg('🎉', '修改已保存', '灵感内容已更新');
+  }
+
+  function resetModalToUpload() {
+    document.querySelector('.modal-title').innerHTML = '上传灵感 <svg width="16" height="16" viewBox="0 0 20 20" fill="none" style="vertical-align:-2px"><path d="M8.14 4.37c.15 0 .3.05.43.15.13.09.22.23.27.38l.62 2.01c.19.61.51 1.17.94 1.62.43.46.95.8 1.53 1l1.89.65c.15.05.27.16.36.29.09.13.14.3.14.46s-.05.33-.14.46c-.09.13-.21.24-.36.29l-1.89.65c-.58.2-1.1.55-1.53 1-.43.46-.75 1.01-.94 1.62l-.62 2.01c-.05.15-.15.28-.27.38-.13.09-.28.15-.43.15s-.3-.05-.43-.15c-.13-.09-.22-.23-.27-.38l-.62-2.01c-.14-.45-.35-.87-.62-1.24a3.5 3.5 0 00-.95-.96c-.43-.45-.95-.8-1.53-1l-1.89-.65c-.15-.05-.27-.16-.36-.29A.8.8 0 012 10.94c0-.17.05-.33.14-.46.09-.13.21-.24.36-.29l1.89-.65c.57-.21 1.08-.55 1.5-1 .41-.44.72-.97.91-1.56l.02-.05.62-2.01c.05-.15.15-.28.27-.38.13-.09.28-.15.43-.15zm6.2-1.87c.07-.06.13-.04.18 0 .06.04.1.1.12.16l.26.86c.08.26.22.5.41.7.18.19.41.34.66.43l.81.28c.06.02.11.06.15.12.04.06.06.13.06.2s-.02.14-.06.2c-.04.06-.1.1-.15.12l-.81.28c-.25.09-.48.24-.66.43-.18.2-.32.43-.41.7l-.27.86c-.02.06-.06.11-.12.16a.26.26 0 01-.18.06c-.07 0-.13-.02-.18-.06a.39.39 0 01-.12-.16l-.26-.86c-.06-.19-.15-.35-.27-.47a1.4 1.4 0 00-.52-.39l-.81-.28a.33.33 0 01-.15-.12.3.3 0 010-.4c.04-.06.1-.1.15-.12l.81-.28c.2-.07.38-.18.52-.39.12-.13.21-.28.27-.47l.26-.86c.02-.06.06-.12.12-.16z" fill="currentColor"/></svg>';
+    document.querySelector('.modal-footer .btn-primary').textContent = '发布灵感 →';
+    document.querySelector('.modal-footer .btn-primary').setAttribute('onclick', 'submitUpload()');
+    document.getElementById('inputTitle').value = '';
+    document.getElementById('inputHighlight').value = '';
+    document.getElementById('inputTags').value = '';
+    document.getElementById('inputUrl').value = '';
+    document.getElementById('inputTitle').style.borderColor = '';
+    uploadedImageData = null;
+    const dropZone = document.getElementById('dropZone');
+    dropZone.innerHTML = `<div class="drop-icon"><svg width="28" height="28" viewBox="0 0 20 20" fill="none"><rect x="2.5" y="3.5" width="15" height="13" rx="2" stroke="currentColor" stroke-width="1.5"/><circle cx="7" cy="8" r="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M2.5 13.5l4-3.5 3 2.5 3-4 5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="drop-text"><strong>拖拽图片 / 截图</strong> 到这里 · 点击选择文件 · Ctrl+V 粘贴</div>`;
+    dropZone.style.padding = '';
+  }
+
+  // ── Empty state ──
+  function checkEmptyState() {
+    try {
+      const raw = localStorage.getItem('inspihub_inspirations');
+      const items = raw ? JSON.parse(raw) : [];
+      const empty = items.length === 0;
+      document.getElementById('emptyState').classList.toggle('visible', empty);
+      document.getElementById('grid').style.display = empty ? 'none' : 'flex';
+    } catch(e) {
+      document.getElementById('emptyState').classList.add('visible');
+      document.getElementById('grid').style.display = 'none';
+    }
+  }
+
+  // ── Storage / card rendering ──
+  const TAG_COLORS = ['ct-orange','ct-purple','ct-green','ct-yellow','ct-pink'];
+
+  function filterByCategory(btn, category) {
+    btn.closest('.filter-row').querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    // Clear search input when using filter
+    document.querySelector('.nav-center input').value = '';
+    const cols = document.querySelectorAll('#grid .masonry-col');
+    cols.forEach(col => col.innerHTML = '');
+    try {
+      const raw = localStorage.getItem('inspihub_inspirations');
+      const items = raw ? JSON.parse(raw) : [];
+      const filtered = category === 'all' ? items :
+        category === '最新' ? [...items].sort((a,b) => new Date(b.createdAt||0) - new Date(a.createdAt||0)) :
+        items.filter(i => (i.tags||[]).some(t => t.toLowerCase() === category.toLowerCase()) || (i.category||'').toLowerCase() === category.toLowerCase());
+      [...filtered].reverse().forEach(item => addCardToGrid(item));
+      checkEmptyState();
+    } catch(e) {}
+  }
+
+  function openLightbox(src) {
+    document.getElementById('lightboxImg').src = src;
+    const lb = document.getElementById('lightbox');
+    lb.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+  function closeLightbox() {
+    document.getElementById('lightbox').style.display = 'none';
+    document.body.style.overflow = '';
+  }
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+
+  const AVATAR_COLORS = ['#c84a20'];
+  function getAvatarColor(email) {
+    return '#c84a20';
+  }
+
+  function buildCardHTML(item, isOwner) {
+    const tagColors = (item.tags || []).map((t, i) => `<span class="card-tag ${TAG_COLORS[i % TAG_COLORS.length]}">${t}</span>`).join('');
+    const name = item.author || (currentUser ? currentUser.email : '');
+    const initial = item.authorInitial || (name[0] ? name[0].toUpperCase() : '?');
+    const avatarColor = getAvatarColor(item.authorEmail || item.author || '');
+    const imgEl = item.image
+      ? `<img src="${item.image}" style="width:100%;display:block;object-fit:cover;max-height:240px;cursor:zoom-in" onclick="event.stopPropagation();openLightbox(this.src)">`
+      : `<div class="img-placeholder" style="height:200px;background:linear-gradient(135deg,#667eea,#764ba2)"><svg width="32" height="32" viewBox="0 0 20 20" fill="none"><rect x="2.5" y="3.5" width="15" height="13" rx="2" stroke="white" stroke-width="1.2"/><circle cx="7" cy="8" r="1.5" stroke="white" stroke-width="1"/><path d="M2.5 13.5l4-3.5 3 2.5 3-4 5 5" stroke="white" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`;
+    const timeStr = item.createdAt ? new Date(item.createdAt).toLocaleString('zh-CN', {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '刚刚';
+    const displayName = (item.authorEmail || item.author || '').split('@')[0] || '用户';
+    const isLiked = isFavorited(item.id);
+    const likedClass = isLiked ? ' liked' : '';
+
+    // Owner actions (edit + delete)
+    const ownerActions = isOwner ? `
+            <button class="card-action edit-btn" title="编辑" onclick="event.stopPropagation();editInspiration(${item.id})"><svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M14.85 2.85a1.5 1.5 0 012.12 0l.18.18a1.5 1.5 0 010 2.12L7.5 14.8l-3.3.82.82-3.3L14.85 2.85z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M12.5 5.5l2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+            <button class="card-action delete-btn" title="删除" onclick="event.stopPropagation();confirmDeleteInspiration(${item.id})"><svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M3 5h14M8 5V3h4v2m2 0v12a1 1 0 01-1 1H7a1 1 0 01-1-1V5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M8.5 9v5M11.5 9v5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></button>` : '';
+
+    return `
+      <div class="card-img">${imgEl}</div>
+      <div class="card-body">
+        <div class="card-title">${item.title || '无标题'}</div>
+        <div class="card-highlight"><svg width="13" height="13" viewBox="0 0 20 20" fill="none" style="vertical-align:-2px"><path d="M10 2a5.5 5.5 0 00-2 10.63V14a1 1 0 001 1h2a1 1 0 001-1v-1.37A5.5 5.5 0 0010 2zm-1 15a1 1 0 001 1h0a1 1 0 001-1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> ${item.highlight || ''}</div>
+        <div class="card-tags">${tagColors}</div>
+        <div class="card-footer">
+          <div class="card-user">
+            <div class="card-user-av" style="background:${avatarColor}">${initial}</div>
+            <div style="display:flex;flex-direction:column;gap:1px">
+              <span style="font-weight:600;font-size:12px;line-height:1.2">${displayName}</span>
+              <span style="font-size:11px;color:var(--muted);line-height:1.2">${timeStr}</span>
+            </div>
+          </div>
+          <div class="card-actions">
+            <button class="card-action${likedClass}" onclick="event.stopPropagation();toggleFavorite(this,${item.id})"><svg width="15" height="15" viewBox="0 0 20 20" fill="none"><path d="M10 17.5s-7-4.5-7-9a3.5 3.5 0 017 0 3.5 3.5 0 017 0c0 4.5-7 9-7 9z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            <button class="card-action" title="分享" onclick="event.stopPropagation();shareInspiration(${item.id})"><svg width="15" height="15" viewBox="0 0 20 20" fill="none"><path fill-rule="evenodd" clip-rule="evenodd" d="M9.74756 2.80458C10.132 2.83673 10.4348 3.15896 10.4351 3.55165C10.4351 3.94447 10.1321 4.26551 9.74756 4.29774V4.30165H4.69287C4.30151 4.30175 3.98422 4.61933 3.98389 5.01063V15.6405C3.98389 16.0321 4.3013 16.3504 4.69287 16.3505H15.5249C15.9165 16.3504 16.2339 16.0321 16.2339 15.6405V11.2128C16.2342 10.7988 16.5699 10.4628 16.9839 10.4628C17.3979 10.4628 17.7336 10.7988 17.7339 11.2128V15.6405C17.7339 16.8605 16.7449 17.8504 15.5249 17.8505H4.69287C3.47288 17.8504 2.48389 16.8605 2.48389 15.6405V5.01063C2.48422 3.7909 3.47308 2.80175 4.69287 2.80165H9.74756V2.80458ZM14.6489 2.66591C14.9599 2.3931 15.4331 2.42366 15.7065 2.73427L17.7661 5.07216C17.7848 5.09348 17.802 5.11583 17.8179 5.13856C17.8242 5.14765 17.8295 5.15751 17.8354 5.16688C17.8533 5.19514 17.8696 5.22397 17.8833 5.2538C17.8913 5.27116 17.8971 5.28946 17.9038 5.30751C17.9096 5.32323 17.9138 5.33938 17.9185 5.35536C17.9385 5.42301 17.9536 5.4941 17.9536 5.56825C17.9536 5.5979 17.9511 5.62739 17.9478 5.65614C17.9463 5.82927 17.8892 6.00312 17.7661 6.14345L15.7075 8.48231C15.4339 8.79311 14.9589 8.82402 14.6479 8.55067C14.3372 8.27709 14.3073 7.80299 14.5806 7.49208L15.5054 6.44032C14.1787 6.63625 12.9169 7.07735 11.9028 7.82509C10.4972 8.86185 9.48595 10.545 9.48584 13.2294C9.4856 13.6432 9.14967 13.9791 8.73584 13.9794C8.32177 13.9794 7.98608 13.6434 7.98584 13.2294C7.98595 10.1082 9.19257 7.96024 11.0122 6.61806C12.3584 5.62537 13.9946 5.1051 15.6245 4.91005L14.5806 3.7245C14.307 3.41358 14.3381 2.93955 14.6489 2.66591Z" fill="currentColor"/></svg></button>${ownerActions}
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function addCardToGrid(item) {
+    const cols = document.querySelectorAll('#grid .masonry-col');
+    let minH = Infinity, minCol = cols[0];
+    cols.forEach(col => {
+      const h = col.getBoundingClientRect().height;
+      if (h < minH) { minH = h; minCol = col; }
+    });
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = buildCardHTML(item);
+    card.style.animation = 'fadeUp 0.4s ease both';
+    minCol.prepend(card);
+  }
+
+  // ── My Inspi Tab Management ──
+  let myInspiActiveFilter = 'all';  // current active tab filter
+
+  function getCustomTabs() {
+    try {
+      const raw = localStorage.getItem('inspihub_my_custom_tabs');
+      return raw ? JSON.parse(raw) : [];
+    } catch(e) { return []; }
+  }
+
+  function saveCustomTabs(tabs) {
+    localStorage.setItem('inspihub_my_custom_tabs', JSON.stringify(tabs));
+  }
+
+  function getMyItems() {
+    try {
+      const raw = localStorage.getItem('inspihub_inspirations');
+      const items = raw ? JSON.parse(raw) : [];
+      const myEmail = currentUser ? currentUser.email : '';
+      const myName = currentUser ? currentUser.name : '';
+      return items.filter(i => i.authorEmail === myEmail || i.author === myName || i.author === myEmail);
+    } catch(e) { return []; }
+  }
+
+  function getAutoTags(myItems) {
+    const tagSet = new Set();
+    myItems.forEach(item => {
+      (item.tags || []).forEach(t => { if(t.trim()) tagSet.add(t.trim()); });
+    });
+    return [...tagSet];
+  }
+
+  function renderMyInspiTabs() {
+    const myItems = getMyItems();
+    const autoTags = getAutoTags(myItems);
+    const customTabs = getCustomTabs();
+    const filterRow = document.getElementById('myInspiFilterRow');
+    if (!filterRow) return;
+
+    // Build HTML: "全部" + auto tags + custom tabs + add button
+    let html = `<button class="filter-btn${myInspiActiveFilter === 'all' ? ' active' : ''}" onclick="filterMyInspi(this,'all')">全部</button>`;
+
+    autoTags.forEach(tag => {
+      const isActive = myInspiActiveFilter === tag ? ' active' : '';
+      html += `<button class="filter-btn${isActive}" onclick="filterMyInspi(this,'${tag.replace(/'/g, "\\'")}')">${tag}</button>`;
+    });
+
+    customTabs.forEach(tab => {
+      const isActive = myInspiActiveFilter === tab ? ' active' : '';
+      html += `<button class="filter-btn${isActive}" onclick="filterMyInspi(this,'${tab.replace(/'/g, "\\'")}')">${tab}<span class="tab-delete" onclick="event.stopPropagation();removeCustomTab('${tab.replace(/'/g, "\\'")}')">×</span></button>`;
+    });
+
+    html += `<button class="add-tab-btn" onclick="showAddTabInput(this)" title="添加自定义标签"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>`;
+
+    filterRow.innerHTML = html;
+  }
+
+  function showAddTabInput(addBtn) {
+    // Replace the + button with inline input
+    const wrapper = document.createElement('span');
+    wrapper.className = 'add-tab-inline';
+    wrapper.innerHTML = `<input type="text" placeholder="标签名" maxlength="20" autofocus>`;
+    addBtn.replaceWith(wrapper);
+    const input = wrapper.querySelector('input');
+    input.focus();
+
+    function confirm() {
+      const val = input.value.trim();
+      if (val) {
+        const customTabs = getCustomTabs();
+        const autoTags = getAutoTags(getMyItems());
+        // Avoid duplicates
+        if (!customTabs.includes(val) && !autoTags.includes(val)) {
+          customTabs.push(val);
+          saveCustomTabs(customTabs);
+        }
+      }
+      renderMyInspiTabs();
+    }
+
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); confirm(); }
+      if (e.key === 'Escape') { renderMyInspiTabs(); }
+    });
+    input.addEventListener('blur', confirm);
+  }
+
+  function removeCustomTab(tab) {
+    const customTabs = getCustomTabs().filter(t => t !== tab);
+    saveCustomTabs(customTabs);
+    // If removed tab was active, reset to 'all'
+    if (myInspiActiveFilter === tab) {
+      myInspiActiveFilter = 'all';
+      refreshMyInspiPage();
+    }
+    renderMyInspiTabs();
+  }
+
+  function filterMyInspi(btn, tag) {
+    myInspiActiveFilter = tag;
+    // Update active state
+    btn.closest('.filter-row').querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    // Re-render cards with filter
+    renderMyInspiCards();
+  }
+
+  function renderMyInspiCards() {
+    const myItems = getMyItems();
+    const filtered = myInspiActiveFilter === 'all'
+      ? myItems
+      : myItems.filter(i => (i.tags || []).some(t => t.trim().toLowerCase() === myInspiActiveFilter.toLowerCase()));
+
+    const myGrid = document.getElementById('myGrid');
+    myGrid.querySelectorAll('.masonry-col').forEach(col => col.innerHTML = '');
+    const myCols = myGrid.querySelectorAll('.masonry-col');
+    [...filtered].reverse().forEach((item, idx) => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = buildCardHTML(item, true);
+      card.style.animation = 'fadeUp 0.4s ease both';
+      myCols[idx % myCols.length].appendChild(card);
+    });
+
+    document.getElementById('myPageStats').textContent = myInspiActiveFilter === 'all'
+      ? `共 ${myItems.length} 条上传`
+      : `"${myInspiActiveFilter}" 下 ${filtered.length} 条 · 共 ${myItems.length} 条`;
+    document.getElementById('myEmptyState').style.display = filtered.length === 0 ? 'flex' : 'none';
+  }
+
+  // ── Refresh My Inspi Page ──
+  function refreshMyInspiPage() {
+    renderMyInspiTabs();
+    renderMyInspiCards();
+  }
+
+  function loadInspirations() {
+    // Clear existing cards first
+    document.querySelectorAll('#grid .masonry-col').forEach(col => col.innerHTML = '');
+
+    try {
+      const raw = localStorage.getItem('inspihub_inspirations');
+      const items = raw ? JSON.parse(raw) : [];
+
+      [...items].reverse().forEach(item => addCardToGrid(item));
+
+      const total = items.length;
+      const authors = new Set(items.map(i => i.author)).size;
+      document.getElementById('feedMeta').textContent =
+        `${total} 条灵感 · ${authors} 位设计师在贡献`;
+
+    } catch(e) {}
+    refreshMyInspiPage();
+    checkEmptyState();
+  }
+
+  // ── Submit ──
+  function submitUpload() {
+    const title = document.getElementById('inputTitle').value.trim();
+    const highlight = document.getElementById('inputHighlight').value.trim();
+    const tagsRaw = document.getElementById('inputTags').value.trim();
+
+    if (!title) {
+      document.getElementById('inputTitle').style.borderColor = 'var(--accent)';
+      document.getElementById('inputTitle').focus();
+      return;
+    }
+
+    const tags = tagsRaw ? tagsRaw.split(/[,，]+/).map(t => t.trim()).filter(Boolean) : [];
+    const newItem = {
+      id: Date.now(),
+      title,
+      highlight,
+      tags,
+      image: uploadedImageData || null,
+      url: document.getElementById('inputUrl').value.trim(),
+      author: currentUser ? currentUser.email : 'unknown',
+      authorEmail: currentUser ? currentUser.email : '',
+      authorInitial: currentUser ? currentUser.initial : '?',
+      createdAt: new Date().toISOString(),
+      time: new Date().toISOString()
+    };
+
+    try {
+      let items = [];
+      const raw = localStorage.getItem('inspihub_inspirations');
+      if (raw) items = JSON.parse(raw);
+      items.push(newItem);
+      localStorage.setItem('inspihub_inspirations', JSON.stringify(items));
+    } catch(e) {}
+
+    addCardToGrid(newItem);
+    checkEmptyState();
+
+    // Update feed stats & sync my inspi page
+    try {
+      const raw = localStorage.getItem('inspihub_inspirations');
+      const items = raw ? JSON.parse(raw) : [];
+      const authors = new Set(items.map(i => i.author)).size;
+      document.getElementById('feedMeta').textContent = `${items.length} 条灵感 · ${authors} 位设计师在贡献`;
+    } catch(e) {}
+    refreshMyInspiPage();
+
+    // Reset form
+    document.getElementById('inputTitle').value = '';
+    document.getElementById('inputHighlight').value = '';
+    document.getElementById('inputTags').value = '';
+    document.getElementById('inputUrl').value = '';
+    document.getElementById('inputTitle').style.borderColor = '';
+    uploadedImageData = null;
+    dropZone.innerHTML = `<div class="drop-icon"><svg width="28" height="28" viewBox="0 0 20 20" fill="none"><rect x="2.5" y="3.5" width="15" height="13" rx="2" stroke="currentColor" stroke-width="1.5"/><circle cx="7" cy="8" r="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M2.5 13.5l4-3.5 3 2.5 3-4 5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="drop-text"><strong>拖拽图片 / 截图</strong> 到这里 · 点击选择文件 · Ctrl+V 粘贴</div>`;
+    dropZone.style.padding = '';
+
+    closeModal();
+    showToastMsg('🎉', '灵感已发布！', '所有团队成员都可以看到了');
+
+    // Notify other tabs about this upload
+    const authorName = currentUser ? (currentUser.name || currentUser.email) : '匿名用户';
+    const notifyPayload = JSON.stringify({
+      author: authorName,
+      title: title,
+      tags: tags.slice(0, 3).join(' · '),
+      time: Date.now()
+    });
+    localStorage.setItem('inspihub_upload_notify', notifyPayload);
+    // Clear it immediately so the next upload triggers storage event again
+    setTimeout(() => localStorage.removeItem('inspihub_upload_notify'), 100);
+  }
+
+  // ── Filter buttons ──
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      this.closest('.filter-row').querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+    });
+  });
+
+  // ── Listen for new uploads (cross-tab via storage event) ──
+  window.addEventListener('storage', function(e) {
+    if (e.key === 'inspihub_upload_notify') {
+      try {
+        const info = JSON.parse(e.newValue);
+        if (info && info.author && info.title) {
+          showToastMsg('🎉', `${info.author} 刚上传了新灵感`, info.title);
+          // Reload data to show the new card
+          loadInspirations();
+        }
+      } catch(err) {}
+    }
+  });
+
+  // ── Init: check saved login ──
+  (function init() {
+    document.getElementById('uploadTrigger').style.display = 'none';
+
+    const savedUser = localStorage.getItem('inspihub_user');
+    if (savedUser) {
+      try {
+        loginWithUser(JSON.parse(savedUser));
+        return;
+      } catch(e) {}
+    }
+
+    // Not logged in
+    document.getElementById('loginPage').classList.remove('hidden');
+
+    // Try to render Google button (with timeout fallback)
+    let googleAttempts = 0;
+    const maxAttempts = 10; // 3 seconds max wait
+
+    function renderGoogleBtn() {
+      googleAttempts++;
+      if (typeof google !== 'undefined' && google.accounts) {
+        googleSDKReady = true;
+        google.accounts.id.initialize({
+          client_id: '1042556696855-g3kj8dj9fah41sanbkag73ev0ejfn36r.apps.googleusercontent.com',
+          callback: handleGoogleCredential,
+          cancel_on_tap_outside: false
+        });
+        google.accounts.id.renderButton(
+          document.getElementById('googleBtnContainer'),
+          { type: 'standard', shape: 'pill', theme: 'outline', text: 'signin_with', size: 'large', locale: 'zh_CN', width: 280 }
+        );
+        google.accounts.id.prompt();
+      } else if (googleAttempts < maxAttempts) {
+        setTimeout(renderGoogleBtn, 300);
+      } else {
+        // SDK failed to load — show hint
+        console.warn('Google GSI SDK failed to load after ' + maxAttempts + ' attempts');
+        document.getElementById('googleErrorHint').style.display = 'block';
+      }
+    }
+    renderGoogleBtn();
+  })();
+
+  // ── 新增：从 data.json 加载初始数据 ──
+  async function loadInitialData() {
+    const raw = localStorage.getItem('inspihub_inspirations');
+    if (raw) return; // 已有数据，跳过
+    try {
+      const resp = await fetch('./data.json');
+      const data = await resp.json();
+      localStorage.setItem('inspihub_inspirations', JSON.stringify(data));
+      console.log('[InspiHub] 已从 data.json 加载', data.length, '条灵感');
+    } catch(e) {
+      console.warn('[InspiHub] 无法加载 data.json:', e.message);
+    }
+  }
+
+  loadInitialData();
+</script>
+</body>
+</html>
