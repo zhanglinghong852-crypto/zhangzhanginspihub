@@ -615,7 +615,7 @@
   .tag-dropdown-menu {
     position: absolute; top: 100%; left: 0; right: 0; margin-top: 6px;
     background: white; border-radius: 12px; border: 1.5px solid rgba(0,0,0,0.1);
-    box-shadow: 0 12px 40px rgba(0,0,0,0.12); z-index: 100;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.12); z-index: 10000;
     opacity: 0; pointer-events: none; transform: translateY(-4px);
     transition: opacity 0.15s, transform 0.15s;
     max-height: 280px; display: flex; flex-direction: column;
@@ -1696,27 +1696,43 @@
   function showHomeAddTag(addBtn) {
     const wrapper = document.createElement('span');
     wrapper.className = 'add-tab-inline';
-    wrapper.innerHTML = `<input type="text" placeholder="标签名" maxlength="20" autofocus>`;
+    wrapper.innerHTML = `<input type="text" placeholder="标签名，回车添加" maxlength="20" autofocus>`;
     addBtn.replaceWith(wrapper);
     const input = wrapper.querySelector('input');
     input.focus();
+
+    const addedTags = [];
     function confirm() {
       const val = input.value.trim();
       if (val) {
         const customTabs = getCustomTabs();
         const allTags = getMergedHomeTags();
-        if (!allTags.map(t=>t.toLowerCase()).includes(val.toLowerCase())) {
-          customTabs.push(val);
-          saveCustomTabs(customTabs);
-        }
+        // 支持多个标签用逗号、顿号分隔
+        const newTags = val.split(/[,，、]+/).map(t => t.trim()).filter(Boolean);
+        newTags.forEach(tag => {
+          if (!allTags.map(t => t.toLowerCase()).includes(tag.toLowerCase())) {
+            customTabs.push(tag);
+            addedTags.push(tag);
+          }
+        });
+        saveCustomTabs(customTabs);
+        input.value = '';
+        input.placeholder = addedTags.length > 0 ? `已添加 ${addedTags.join('、')}，继续输入或按 ESC` : '标签名，回车添加';
+        syncHomeFilterTags();
+        // 保持输入框继续可用，直到用户按 ESC 或点击外部
+        input.focus();
+        return; // 不关闭，继续添加
       }
+      // 空值时关闭
       syncHomeFilterTags();
     }
     input.addEventListener('keydown', e => {
       if (e.key === 'Enter') { e.preventDefault(); confirm(); }
       if (e.key === 'Escape') { syncHomeFilterTags(); }
     });
-    input.addEventListener('blur', confirm);
+    input.addEventListener('blur', () => {
+      setTimeout(() => syncHomeFilterTags(), 200);
+    });
   }
 
   function openLightbox(src) {
@@ -1828,25 +1844,43 @@
   function syncHomeFilterTags() {
     const filterRow = document.querySelector('.feed-header .filter-row');
     if (!filterRow) return;
-    // Remove dynamically added filter buttons (keep static ones)
-    const staticCats = ['全部','最新','Web','移动端','client','运营','动效','插图'];
+    // Remove ALL dynamically added filter buttons (keep only static ones)
+    const staticCats = ['全部','最新','Web','移动端','运营','动效','插图'];
     Array.from(filterRow.children).forEach(el => {
-      if (el.classList.contains('add-tab-btn') ||
-          (el.classList.contains('filter-btn') && !staticCats.includes(el.textContent.trim()))) {
+      if (el.classList.contains('filter-btn') && !staticCats.includes(el.textContent.trim().replace('、', ','))) {
         el.remove();
       }
     });
     // Find insert point (before add-tab-btn)
     const addTabBtn = filterRow.querySelector('.add-tab-btn');
     const merged = getMergedHomeTags();
+    // 去重后再渲染
+    const seen = new Set();
     merged.forEach(tag => {
+      const key = tag.toLowerCase().replace(/[,，、]/g, '');
+      if (seen.has(key)) return;
+      seen.add(key);
       const btn = document.createElement('button');
       btn.className = 'filter-btn';
-      btn.textContent = tag;
+      // 添加删除按钮（自定义标签可删除）
+      const isCustom = getCustomTabs().includes(tag);
+      btn.innerHTML = tag + (isCustom ? `<span class="tab-delete" onclick="event.stopPropagation();removeHomeCustomTab('${tag.replace(/'/g, "\\'")}')">×</span>` : '');
       btn.onclick = function() { filterByCategory(this, tag); };
       if (addTabBtn) filterRow.insertBefore(btn, addTabBtn);
       else filterRow.appendChild(btn);
     });
+  }
+
+  function removeHomeCustomTab(tab) {
+    let customTabs = getCustomTabs();
+    customTabs = customTabs.filter(t => t !== tab);
+    saveCustomTabs(customTabs);
+    syncHomeFilterTags();
+    // 如果当前正在筛选这个标签，重置为全部
+    if (currentFilter === tab) {
+      const allBtn = document.querySelector('.feed-header .filter-btn');
+      if (allBtn) filterByCategory(allBtn, '全部');
+    }
   }
 
   function loadInspirations() {
